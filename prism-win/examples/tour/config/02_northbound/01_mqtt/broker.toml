@@ -1,0 +1,59 @@
+# =============================================================================
+# broker.toml — how Prism connects to an MQTT broker
+#
+# MQTT is the usual way to hand data to a SCADA, a dashboard or another
+# program. Prism is an MQTT client: it connects to a broker (for example
+# Mosquitto) and publishes values, alarms and status there. If no broker is
+# reachable, Prism keeps running and simply publishes nothing.
+#
+# Safe to change: host, port, credentials, TLS. The [defaults.*] sections set
+# the pace for every tag; a single tag can override them in tags.toml.
+# =============================================================================
+
+[broker]
+host           = "localhost"
+port           = 1883
+keep_alive_sec = 60
+clean_session  = true
+inflight       = 100
+
+# Credentials (optional, uncomment both lines):
+# username     = "prism"
+# password_env = "PRISM_MQTT_PASSWORD"   # preferred: the secret stays out of files
+# tls          = true                    # MQTTS; system CAs are used by default
+
+[defaults]
+# Re-send "device is alive" messages even when nothing changes (0 = off).
+alarm_heartbeat_ms = 0
+fail_heartbeat_ms  = 0
+
+[defaults.telemetry]
+enabled         = true
+# batch  = several values in one message (smaller traffic)
+# single = one message per value (simpler for hand-written clients)
+mode            = "batch"
+qos             = 0
+retain          = true
+# Do not publish the same value more often than this, ms.
+min_interval_ms = 50
+# Do not publish a change smaller than this.
+min_delta       = 0.01
+
+[defaults.commands]
+enabled    = true
+qos        = 1
+timeout_ms = 5000
+
+# ── Sparkplug B (optional) ────────────────────────────────────────────────────
+# A standard MQTT envelope understood by many SCADA/IIoT systems without extra
+# mapping. It replaces the JSON templates for the topics it owns; leave it off
+# when the receiver expects plain JSON.
+#
+# [sparkplug]
+# enabled      = true
+# group_id     = "prism"
+# edge_node_id = "tour"
+# device_id    = "plc"     # optional: metrics then go as DBIRTH/DDATA
+# qos          = 0
+# aliases      = true      # shorter data messages after the first one
+# alias_base   = 1

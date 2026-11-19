@@ -1,0 +1,44 @@
+# =============================================================================
+# tags.toml — which tags travel over MQTT, and how
+#
+# Telemetry (Prism -> outside): a group rule matches tag names by a pattern;
+# a tag rule overrides the group for one tag. Commands (outside -> Prism) must
+# be listed explicitly: without a [[command]] entry a value is never accepted
+# from MQTT, even if the tag is writable in the device config.
+#
+# In the tour the MQTT part is optional: with no broker reachable these rules
+# are simply idle.
+#
+# Safe to change: patterns, rates, command list.
+# =============================================================================
+
+# Every tag of the Modbus device, batched into telemetry messages.
+[[telemetry_group]]
+pattern         = "tour_plc.*"
+mode            = "batch"
+min_interval_ms = 100
+min_delta       = 0.01
+
+# Calculated tags travel at a calmer pace.
+[[telemetry_group]]
+pattern         = "calculations.*"
+min_interval_ms = 500
+
+# One tag needs finer resolution than its group.
+[[telemetry_tag]]
+tag             = "tour_plc.temperature"
+min_interval_ms = 50
+min_delta       = 0.05
+
+# ── Writes accepted from MQTT ────────────────────────────────────────────────
+# Publish {"tag":"tour_plc.setpoint","value":75} to prism/command/set.
+
+[[command]]
+tag     = "tour_plc.setpoint"
+enabled = true
+qos     = 1
+
+[[command]]
+tag     = "tour_plc.pump_run"
+enabled = true
+qos     = 1

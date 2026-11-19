@@ -1,0 +1,24 @@
+# =============================================================================
+# 01_tour.toml — one alarm rule
+#
+# An alarm rule watches a tag and holds a signalling tag `alarm.<id>` while the
+# condition is true. The signal is visible to MQTT, OPC UA, Rhai and the
+# debugger; `prism` also writes a row to `data/alarms.csv` on every transition.
+#
+# This rule trips above 80 °C and clears only below 78 °C (hysteresis), so a
+# value hovering at the limit does not chatter.
+#
+# Safe to change: max, hysteresis, priority, message. Use `min` instead of `max`
+# for a low alarm.
+# =============================================================================
+
+[[alarm]]
+id       = "alarm.temperature_high"
+tag      = "tour_plc.temperature"
+priority = "warning"           # info | warning | critical | emergency
+message  = "Tour temperature {value} °C is above {limit} °C"
+for_ms   = 1000                # the condition must hold for one second
+
+[alarm.limit]
+max        = 80.0
+hysteresis = 2.0

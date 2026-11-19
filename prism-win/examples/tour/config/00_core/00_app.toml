@@ -1,0 +1,45 @@
+# =============================================================================
+# 00_core/00_app.toml — settings of the program itself
+#
+# This is the first file Prism reads. It defines the project name, where logs
+# and the alarm journal are written, and whether the local debug API that
+# `prism-dbg` uses is enabled. The paths are relative to the `config/` folder.
+#
+# Safe to change: instance_name, logging.level, debug.enabled/listen.
+# Keep the license paths as they are unless you move the files.
+# =============================================================================
+
+schema_version = 2
+
+[system]
+# The name shown in logs, MQTT status tags and `prism-dbg`.
+instance_name = "prism-tour"
+# Windows only: hide the console window when the program is started.
+hide_console = false
+
+[logging]
+# error | warn | info | debug | trace
+level        = "info"
+# text for people, json for log collectors.
+format       = "text"
+stdout       = true
+file_enabled = true
+file_path    = "logs/prism.log"
+
+[license]
+# `prism license request` writes licensing/license_request.toml.
+# The vendor sends back a signed license.key for this machine.
+key_path   = "../licensing/license.key"
+state_path = "../licensing/license_state.json"
+
+[alarms]
+# The alarm journal, one row per transition.
+history_path = "../data/alarms.csv"
+max_size_mb  = 4
+max_files    = 4
+
+[debug]
+# Local JSON API used by prism-dbg. Keep enabled for the tour; set false in
+# production if you do not want local write access.
+enabled = true
+listen  = "127.0.0.1:7200"

@@ -1,0 +1,34 @@
+# =============================================================================
+# 02_compute/compute.toml — WASM compute blocks (commented example)
+#
+# A compute block runs a small WASM program in the background: a filter, an
+# observer, a soft sensor. It reads existing tags and writes its results, but
+# owns no tags of its own (unlike a device plugin in 01_source/).
+# =============================================================================
+
+# [defaults]
+# enabled      = true
+# error_policy = "log_and_hold"   # log_and_hold | disable_block | backoff
+#
+# [[plugin]]
+# id            = "example_filter"
+# path          = "../plugins/example/compute_plugin_example.wasm"
+# max_memory_mb = 64
+# fuel_per_call = 500000000
+#
+# [[block]]
+# name         = "temperature_filter"
+# plugin       = "example_filter"
+# period_ms    = 100
+# error_policy = "backoff"
+#
+# [block.params]
+# q = 0.01
+# r = 1.0
+#
+# [[block.input]]
+# tag = "plc1.temperature"
+#
+# [[block.output]]
+# tag   = "calculations.temperature_filtered"
+# scale = 1.0

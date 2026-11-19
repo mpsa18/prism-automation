@@ -1,0 +1,46 @@
+# =============================================================================
+# 01_mqtt/broker.toml — how Prism connects to an MQTT broker
+#
+# Prism is an MQTT client. Without a reachable broker it keeps running and
+# simply publishes nothing. This file is shipped disabled; change `enabled`
+# to true and uncomment the connection settings when a broker is available.
+# =============================================================================
+
+enabled = false
+
+[broker]
+# host           = "localhost"
+# port           = 1883
+# keep_alive_sec = 60
+# clean_session  = true
+# inflight       = 100
+#
+# # Credentials (optional):
+# # username     = "prism"
+# # password_env = "PRISM_MQTT_PASSWORD"   # preferred: the secret stays out of files
+# # tls          = true                    # MQTTS; system CAs are used by default
+#
+# [defaults]
+# alarm_heartbeat_ms = 0
+# fail_heartbeat_ms  = 0
+#
+# [defaults.telemetry]
+# enabled         = true
+# mode            = "batch"     # batch | single
+# qos             = 0
+# retain          = true
+# min_interval_ms = 50
+# min_delta       = 0.01
+#
+# [defaults.commands]
+# enabled    = true
+# qos        = 1
+# timeout_ms = 5000
+#
+# # Sparkplug B (optional):
+# [sparkplug]
+# enabled      = true
+# group_id     = "prism"
+# edge_node_id = "site"
+# device_id    = "plc"
+# qos          = 0

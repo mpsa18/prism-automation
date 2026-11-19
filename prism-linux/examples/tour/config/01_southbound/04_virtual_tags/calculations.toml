@@ -1,0 +1,29 @@
+# =============================================================================
+# calculations — values that Prism computes itself
+#
+# Virtual tags have no register and no device. `expression` is a small Rhai
+# formula evaluated every 500 ms (the default from defaults.toml); it can
+# read any other tag with `read("device.tag")`.
+#
+# Safe to change: the formula and the initial value.
+# =============================================================================
+
+[[device]]
+name     = "calculations"
+protocol = "virtual"
+
+# Celsius to Fahrenheit, computed from the PLC value.
+[[device.tag]]
+name        = "temperature_f"
+data_type   = "float"
+unit        = "°F"
+description = "Tour temperature in Fahrenheit (calculated)"
+expression  = 'read("tour_plc.temperature") * 9.0 / 5.0 + 32.0'
+
+# A scratch-pad tag: written by an operator or SCADA, held by Prism.
+[[device.tag]]
+name          = "maintenance_mode"
+data_type     = "bool"
+access        = "rw"
+initial_value = 0.0
+description   = "Operator switch used by scripts and alarms"

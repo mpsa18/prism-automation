@@ -1,0 +1,95 @@
+# prism-sniff — passive field-bus sniffer configuration.
+#
+# The tool looks for this file next to prism-sniff(.exe) first, then in the
+# current directory. Run several instances in parallel either with separate
+# files:
+#
+#   prism-sniff --config bus-a.toml
+#   prism-sniff --config bus-b.toml
+#
+# or with one file that contains several [[source]] blocks:
+#
+#   prism-sniff --config sniff.toml --source rs485-main
+#   prism-sniff --config sniff.toml --source plc-s7
+#
+# Every log line is tagged with the source name.
+
+[log]
+timestamp = "local"   # local | utc | mono | none
+hex = true            # print raw bytes under every decoded event
+hex_limit = 64        # maximum bytes in that hex line
+color = "auto"        # auto | always | never (NO_COLOR is honoured)
+raw = true            # print frames no decoder understood
+# Recording format: "text" mirrors the console; "jsonl" writes the
+# serial_lab.Capture format ({"meta": …} + {t_ms,dir,bytes,note}).
+# CLI override: --record-jsonl (also starts recording).
+format = "text"
+# Ctrl+R (or F2) toggles recording; F3 writes a marker; Ctrl+C stops and exits.
+# A relative record_dir is resolved from the prism-sniff binary directory,
+# so the default is <binary>/log/.
+record_dir = "log"
+# Markers are not configured here: pass --marker-file <path> on the CLI.
+# External automation appends one line per step; prism-sniff watches it.
+
+# ── Passive serial tap ──────────────────────────────────────────────────────
+# A dedicated RS-485 listen-only adapter on the same bus. The sniffer opens
+# this port read-only and never writes a byte. EDIT `port` to your tap adapter.
+[[source]]
+name = "rs485-main"
+kind = "serial"
+mode = "tap"
+protocol = "auto"     # auto | modbus-rtu | modbus-ascii | raw
+port = "COM4"
+baud = 9600
+data_bits = 8
+parity = "none"       # none | even | odd
+stop_bits = 1
+flow = "none"         # none | software | hardware
+idle_ms = "auto"       # "auto" derives the gap from baud (~2 ms at 19200) and adapts;
+                        # a number (e.g. 20) pins a fixed gap in milliseconds
+
+# ── TCP inline proxy (Modbus TCP / S7comm / OPC UA / MQTT) ──────────────────
+# Transparent byte-for-byte relay. Point Prism at `listen`; the sniffer
+# connects to `target` and logs both directions. Nothing is modified.
+#[[source]]
+#name = "plc-s7"
+#kind = "tcp"
+#mode = "proxy"
+#protocol = "auto"     # auto | modbus-tcp | s7 | opc-ua | mqtt | raw
+#listen = "127.0.0.1:1102"
+#target = "192.168.0.10:102"
+#idle_ms = 20
+#connect_timeout_ms = 3000
+
+# ── Serial gateway monitor port (Moxa, USR-TCP232, ...) ─────────────────────
+# Read-only stream: the sniffer connects and never writes. Use the monitor
+# port of the gateway, not the transparent data port.
+#[[source]]
+#name = "rs485-gw"
+#kind = "tcp"
+#mode = "connect"
+#protocol = "modbus-rtu"   # the gateway forwards serial bytes
+#address = "192.168.0.50:4001"
+#idle_ms = 20          # TCP streams have no baud; "auto" uses 20 ms there
+#reconnect_ms = 2000
+#connect_timeout_ms = 3000
+
+# ── Inline serial relay through a virtual COM pair ──────────────────────────
+# Requires com0com (Windows) or socat (Linux) to create a pair, e.g. COM4<->COM5.
+# The sniffer owns the real device port (target) and the COM5 end; Prism opens
+# COM4. Bytes are forwarded unchanged. This is NOT a passive tap: the sniffer
+# is in the path, but Prism keeps working.
+#[[source]]
+#name = "com-inline"
+#kind = "serial"
+#mode = "proxy"
+#protocol = "auto"
+#port = "COM5"          # sniffer side of the virtual pair
+#target = "COM3"        # real device port
+#peer = "COM4"          # Prism opens this end (informational only)
+#baud = 9600
+#data_bits = 8
+#parity = "none"
+#stop_bits = 1
+#flow = "none"
+#idle_ms = "auto"      # same auto gap as in the serial tap above

@@ -1,0 +1,31 @@
+# =============================================================================
+# 02_opc_server/00_example.toml — Prism as an OPC UA server
+#
+# The server publishes selected tags as OPC UA nodes. It listens on loopback by
+# default; for network access set host = "0.0.0.0" and choose a security policy.
+# The exported nodes are declared in nodes.toml next to this file.
+# =============================================================================
+
+# [server]
+# enabled            = true
+# host               = "127.0.0.1"
+# port               = 4840
+# endpoint_path      = "/"
+# namespace_uri      = "urn:prism:tags"
+# security_policy    = "None"
+# security_mode      = "None"
+# allow_anonymous    = true
+# update_interval_ms = 100
+# write_timeout_ms   = 5000
+#
+# # nodes.toml (commented example):
+# # [defaults]
+# # namespace_index = 2
+# # namespace_uri   = "urn:prism:tags"
+# # writable        = false
+# # publish_mode    = "on_change"
+# #
+# # [[node]]
+# # tag      = "plc1.temperature"
+# # node_id  = "ns=2;s=plc1.temperature"
+# # writable = false

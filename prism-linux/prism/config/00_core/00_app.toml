@@ -1,0 +1,47 @@
+# =============================================================================
+# 00_core/00_app.toml — settings of the program itself
+#
+# Only the project name is active; every other key is commented out and falls
+# back to the default shown next to it. Paths are relative to `config/`.
+# =============================================================================
+
+schema_version = 2
+
+[system]
+# Name shown in logs, MQTT status tags and `prism-dbg`.
+instance_name = "prism"
+
+# Windows only: hide the console window.
+# hide_console = false
+
+# [logging]
+# level        = "info"      # error | warn | info | debug | trace
+# format       = "text"      # text | json
+# stdout       = true
+# file_enabled = true
+# file_path    = "logs/prism.log"
+# rotation     = "daily"
+# max_files    = 14
+# max_size_mb  = 64
+
+# [license]
+# key_path   = "../licensing/license.key"
+# state_path = "../licensing/license_state.json"
+
+# [inventory]
+# strict             = true
+# count_virtual_tags = true
+# count_script_tags  = true
+# emit_report_path   = "../data/tag_inventory.json"
+
+# [alarms]
+# history_path = "../data/alarms.csv"
+# max_size_mb  = 4
+# max_files    = 4
+
+# [debug] — local API used by prism-dbg
+# enabled          = false
+# listen           = "127.0.0.1:7200"
+# override_ttl_ms  = 60000
+# override_quality = "uncertain"
+# audit_path       = "logs/override_audit.log"

@@ -1,0 +1,51 @@
+# =============================================================================
+# 01_mqtt/channels.toml — MQTT topics and message shapes
+#
+# A channel ties a fixed contract to a topic. Topic placeholders {severity}
+# and {device} are filled automatically. The JSON templates live in payloads/.
+# =============================================================================
+
+# schema_version = 4
+# contract_id    = "prism-mqtt-v4"
+#
+# [[channel]]
+# id       = "telemetry"
+# contract = "telemetry"
+# topic    = "prism/telemetry"
+# envelope = "payloads/telemetry.envelope.json"
+# item     = "payloads/telemetry.item.json"
+#
+# [[channel]]
+# id       = "command"
+# contract = "command"
+# topic    = "prism/command/set"
+#
+# [[channel]]
+# id       = "command_ack"
+# contract = "ack"
+# topic    = "prism/command/ack"
+# item     = "payloads/ack.json"
+#
+# [[channel]]
+# id       = "alarm"
+# contract = "alarm"
+# topic    = "prism/event/alarm/{severity}"
+# item     = "payloads/alarm.json"
+#
+# [[channel]]
+# id       = "fail"
+# contract = "fail"
+# topic    = "prism/event/fail/{device}"
+# item     = "payloads/fail.json"
+#
+# [[channel]]
+# id       = "status"
+# contract = "status"
+# topic    = "prism/status"
+# item     = "payloads/status.json"
+#
+# [[channel]]
+# id       = "diagnostic"
+# contract = "diagnostic"
+# topic    = "prism/event/diag/{severity}"
+# item     = "payloads/diagnostic.json"

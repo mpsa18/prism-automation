@@ -1,0 +1,43 @@
+# =============================================================================
+# nodes.toml — which tags become OPC UA nodes
+#
+# [defaults] applies to every node below. Each [[node]] maps one Prism tag to
+# one node id. `writable = true` lets an OPC UA client write the tag (the same
+# rules as MQTT commands apply: the tag must be writable in the device config).
+#
+# Node ids use the form ns=2;s=<tag>. "ns=2" is the index Prism assigns to
+# namespace_uri from server.toml.
+#
+# Safe to change: the node list, node ids, writable flags.
+# =============================================================================
+
+[defaults]
+namespace_index = 2
+namespace_uri   = "urn:prism:tags"
+writable        = false
+publish_mode    = "on_change"   # on_change | periodic
+
+[[node]]
+tag      = "tour_plc.temperature"
+node_id  = "ns=2;s=tour_plc.temperature"
+writable = false
+
+[[node]]
+tag      = "tour_plc.pressure"
+node_id  = "ns=2;s=tour_plc.pressure"
+writable = false
+
+[[node]]
+tag      = "calculations.temperature_f"
+node_id  = "ns=2;s=calculations.temperature_f"
+writable = false
+
+[[node]]
+tag      = "tour_plc.setpoint"
+node_id  = "ns=2;s=tour_plc.setpoint"
+writable = true
+
+[[node]]
+tag      = "tour_plc.pump_run"
+node_id  = "ns=2;s=tour_plc.pump_run"
+writable = true

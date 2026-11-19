@@ -1,0 +1,24 @@
+# =============================================================================
+# scripts/bindings.toml — when Rhai scripts run
+#
+# [[script]] — lifecycle hooks: on_init once at start, on_close once at stop.
+# [[poll]]   — a function called in the background at a fixed interval.
+# =============================================================================
+
+# [defaults]
+# enabled        = true
+# error_policy   = "log_and_hold"   # log_and_hold | disable_script | backoff
+# op_budget_tick = 100000
+# timeout_ms     = 5
+#
+# [[script]]
+# file     = "main.rhai"
+# triggers = ["on_init", "on_close"]
+#
+# [[poll]]
+# name         = "tick"
+# file         = "main.rhai"
+# function     = "tick"
+# interval_ms  = 5000
+# enabled      = true
+# run_on_start = true

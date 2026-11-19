@@ -1,0 +1,14 @@
+# =============================================================================
+# 04_virtual_tags/defaults.toml — shared settings for calculated tags
+#
+# Virtual tags have no device and no register: Prism computes them itself.
+# `eval_interval_ms` is how often every formula is re-evaluated, and
+# `data_type` is used when a tag does not declare its own. The tags themselves
+# live next to this file in calculations.toml.
+#
+# Safe to change: both values.
+# =============================================================================
+
+[defaults]
+eval_interval_ms = 500
+data_type        = "float"

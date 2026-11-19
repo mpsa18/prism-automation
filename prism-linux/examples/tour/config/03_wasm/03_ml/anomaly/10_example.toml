@@ -1,0 +1,46 @@
+# =============================================================================
+# ml/anomaly/10_example.toml — machine-learning inference (commented example)
+#
+# An ML plugin evaluates a model (often ONNX) on a schedule and writes the
+# result to tags: anomaly score, remaining useful life, a predicted value. The
+# core collects the features, calls the plugin and publishes the outputs; the
+# maths stays inside the plugin.
+#
+# This file is a ready-to-edit example, fully commented out: nothing runs until
+# you remove the leading "#" and supply a .wasm file built for the prism:ml
+# contract. `prism-devtools ml new anomaly` creates a complete plugin project
+# with that contract, so no Prism sources are needed.
+#
+# Paths are relative to the config/ directory.
+# =============================================================================
+
+# [defaults]
+# enabled         = true
+# replay          = false   # record every inference to a replay log
+# result_ttl_ms   = 5000    # how long an on-demand result stays readable
+# adhoc_wait_ms   = 50      # upper bound of a synchronous `ml_infer` call
+#
+# # One model artifact; several jobs may share it.
+# [[plugin]]
+# id          = "anomaly"
+# path        = "../plugins/anomaly/anomaly.wasm"
+# model       = "../models/anomaly_v1.onnx"   # omit if the model is embedded
+# timeout_ms  = 500
+# max_memory_mb = 128
+#
+# # A job decides when and with which features the model is called.
+# [[job]]
+# name      = "temperature_anomaly"
+# plugin    = "anomaly"
+# period_ms = 1000
+#
+# # One feature: either the current value or a window of history.
+# [[job.feature]]
+# tag         = "tour_plc.temperature"
+# kind        = "history"    # value | history
+# window_ms   = 60000
+# max_samples = 128
+#
+# # Where the inference result lands.
+# [[job.output]]
+# tag = "calculations.temperature_anomaly"

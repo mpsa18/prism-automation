@@ -1,0 +1,6 @@
+{
+  "device": "{{namespace}}",
+  "tag": "{{name}}",
+  "ts": "{{timestamp}}",
+  "value": "{{value}}"
+}

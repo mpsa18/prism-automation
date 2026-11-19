@@ -1,0 +1,17 @@
+# =============================================================================
+# 06_history/00_example.toml — in-memory history for selected tags
+#
+# History keeps the last N accepted samples per tag in RAM. Nothing is written
+# to disk; Rhai and ML modules can read the window.
+# =============================================================================
+
+# [defaults]
+# enabled   = true
+# depth     = 600             # samples per tag (1..=100000)
+# sample_ms = 500             # at most one sample every 500 ms (0 = every update)
+#
+# [[tag]]
+# id = "plc1.temperature"
+#
+# [[tag]]
+# id = "calculations.temperature_f"

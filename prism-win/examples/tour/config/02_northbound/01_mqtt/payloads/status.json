@@ -1,0 +1,5 @@
+{
+  "device": "{{namespace}}",
+  "status": "{{status}}",
+  "ts": "{{timestamp}}"
+}

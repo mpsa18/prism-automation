@@ -1,0 +1,24 @@
+# =============================================================================
+# server.toml — Prism as an OPC UA server
+#
+# OPC UA is the common language of SCADA and MES systems. Here Prism publishes
+# selected tags as OPC UA nodes, so any OPC UA client can browse and read them
+# without knowing about Modbus. The server listens on the loopback address by
+# default; nothing is exposed to the network.
+#
+# Safe to change: port, endpoint_path, security settings. Security is off in
+# the tour to keep the first connection simple; a real installation should use
+# a certificate and a non-anonymous policy.
+# =============================================================================
+
+[server]
+enabled            = true
+host               = "127.0.0.1"
+port               = 4840
+endpoint_path      = "/"
+namespace_uri      = "urn:prism:tags"
+security_policy    = "None"
+security_mode      = "None"
+allow_anonymous    = true
+update_interval_ms = 100
+write_timeout_ms   = 5000

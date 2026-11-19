@@ -1,0 +1,9 @@
+# ==============================================================================
+# Prism Industrial Serial Device Persistent Symlink Rules
+# ==============================================================================
+# Prevents /dev/ttyUSB* index swapping across system reboots for RS-485 adapters.
+# Replace idVendor and idProduct with your specific industrial adapter values.
+# Check attributes using: udevadm info -a -n /dev/ttyUSB0
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", SYMLINK+="tty_modbus_field", OWNER="prism", GROUP="dialout", MODE="0660"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="tty_modbus_cp210x", OWNER="prism", GROUP="dialout", MODE="0660"

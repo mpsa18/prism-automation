@@ -1,0 +1,20 @@
+# =============================================================================
+# history.toml — in-memory history for selected tags
+#
+# History stores the last N accepted samples per tag in RAM. It is used by Rhai
+# (`history()` / `history_samples()`) and by ML modules; nothing is written to
+# disk. Memory is about `depth * 32` bytes per tag.
+#
+# Safe to change: depth (1..=100000) and sample_ms (0 = every update).
+# =============================================================================
+
+[defaults]
+enabled   = true
+depth     = 600       # 600 samples per tag
+sample_ms = 500       # at most one sample every 500 ms
+
+[[tag]]
+id = "tour_plc.temperature"
+
+[[tag]]
+id = "calculations.temperature_f"

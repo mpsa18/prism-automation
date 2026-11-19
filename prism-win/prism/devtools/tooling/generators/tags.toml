@@ -1,0 +1,103 @@
+# Declarative configuration for `prism-devtools generate tags`.
+#
+# The command is usable without this file — a single tag can be generated from
+# the console, where every option below has a flag:
+#
+#   prism-devtools generate tags --device io_controller \
+#       --name 'pump_{i:02}_run' --count 4 --address 600 --stride 2 \
+#       --register coil --type bool --access rw
+#
+# Full reference: docs/03_tooling/06_DEVTOOLS.md, section `generate tags`.
+# Everything in this file is optional; CLI flags win over the file.
+#
+# Render modes (`[generator].mode`):
+#   full      - every applicable key with its effective value;
+#   delta     - only keys that differ from the defaults;
+#   annotated - delta plus the inherited keys commented out with `# default`
+#               (the default mode: easy to review, easy to uncomment).
+#
+# Existing tags (`[generator].existing`):
+#   error     - stop when a generated tag is already present;
+#   skip      - keep the existing tag and add only missing ones (default);
+#   overwrite - rewrite the target file with this batch, keeping a `.bak`.
+#
+# The generated TOML is hand-managed: after the first write the generator
+# never owns it and never reports drift. Keep `existing = "skip"` and edit the
+# file by hand.
+
+[generator]
+kind = "tags"
+mode = "annotated"                          # full | delta | annotated
+existing = "skip"                           # error | skip | overwrite
+report_path = "data/tags_generator_report.json"
+
+# Values applied to every group. Only batch-control keys are active here; the
+# tag keys are listed in comments so a group can enable them by uncommenting.
+[defaults]
+protocol = "modbus"                         # modbus | s7comm | opc-client | virtual | wasm
+file = "10_tags.toml"                       # target file inside the device directory
+# draft = false                             # true: write `#<file>` (runtime ignores `#` names)
+
+# Tag keys (uncomment in [defaults] to apply to every group, or repeat inside
+# a [[group]]). Protocol-specific keys are marked.
+#   address      = 0                        # Modbus: first register / coil address
+#   register     = "holding"                # Modbus: holding | input | discrete | coil
+#   s7           = { area = "DB", db = 1, offset = 0 }   # S7comm: area, db, offset, bit
+#   node_id      = "ns=2;s=device.tag"      # OPC UA client
+#   namespace_uri = "urn:prism:tags"        # OPC UA client
+#   data_type    = "word"                   # required for physical protocols
+#                                           # bool | word | dword | int | dint | real | float | string
+#   access       = "ro"                     # ro | rw | wo
+#   unit         = ""                       # engineering unit
+#   description  = ""                       # published by MQTT when enabled
+#   scale        = 1.0                      # raw * scale + offset
+#   offset       = 0.0
+#   eng_max      = 100.0                    # auto scale = eng_max / raw_max
+#   raw_max      = 65535.0
+#   min          = 0.0                      # write range validation
+#   max          = 100.0
+#   word_order   = "be"                     # be | le (multi-register values)
+#   byte_order   = "be"                     # be | le (inside a word)
+#   mirror_to    = "device.tag"             # copy the value into another tag
+#   mirror_scale = 1.0
+#   fail         = { fail_strategy = "last_known" }   # last_known | zero | nan | abort
+#   byte_len     = 32                       # string tags
+#   string_format = "raw"                   # s7 | raw (string tags)
+#   expression   = "read(\"plc.temp\") + 1.0"         # virtual: inline Rhai
+#   script_func  = "compute_value"          # virtual: Rhai function
+#   initial_value = 0.0                     # value before the first evaluation
+
+# A batch of generated tags. `{i}`, `{i:02}` and `{device}` expand in `name`;
+# `address` is the first address and `stride` steps through the batch.
+#
+# [[group]]
+# device = "io_controller"
+# file = "10_tags.toml"
+# count = 4
+# name = "pump_{i:02}_run"
+# address = 600
+# stride = 2
+# register = "coil"
+# data_type = "bool"
+# access = "rw"
+# unit = ""
+#
+# # Per-tag entries in the same group: `count`/`name` are ignored.
+# [[group.tag]]
+# name = "pump_01_run"
+# address = 600
+# description = "Main pump start/stop"
+#
+# [[group.tag]]
+# name = "pump_01_fault"
+# address = 601
+# description = "Main pump fault"
+#
+# # `address` may also be a table when the batch needs an explicit step:
+# [[group]]
+# device = "io_controller"
+# name = "sensor_{i:02}"
+# count = 3
+# address = { base = 100, stride = 4 }
+# data_type = "word"
+# unit = "C"

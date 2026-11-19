@@ -1,0 +1,14 @@
+# =============================================================================
+# 03_opc_client/defaults.toml — southbound OPC UA client defaults
+#
+# Devices in this folder read data from an external OPC UA server.
+# =============================================================================
+
+# [defaults]
+# security_policy      = "None"
+# security_mode        = "None"
+# pki_dir              = "config/pki/client"
+# trust_server_certs   = false
+# max_nodes_per_read   = 100
+# session_timeout_ms   = 60000
+# reconnect_backoff_ms = 1000

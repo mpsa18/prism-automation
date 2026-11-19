@@ -1,0 +1,60 @@
+# Declarative configuration for OPC UA Server Generator.
+# Maps internal device tags to external OPC UA address space nodes.
+
+[generator]
+kind         = "opc_server"
+output_dir   = "config/02_northbound/02_opc_server"
+on_collision = "error"          # error | skip | rename
+dry_run      = false
+report_path  = "data/opc_server_generator_report.json"
+# layout     = "single"         # single (nodes.toml) | split (nodes.d/<device>.toml)
+
+# Targets: specific files (strictly that file) or directories (recursive)
+targets = [
+  "config/01_southbound/01_modbus",
+  "config/01_southbound/02_s7comm",
+  "config/01_southbound/04_virtual_tags",
+]
+
+[template]
+node_id = "ns=2;s={device}.{tag}"
+
+[defaults.server]
+enabled            = true
+# Генерируемые конфиги безопасны по умолчанию: только loopback.
+host               = "127.0.0.1"
+port               = 4840
+endpoint_path      = "/"
+namespace_uri      = "urn:prism:tags"
+security_policy    = "None"
+security_mode      = "None"
+allow_anonymous    = true
+update_interval_ms = 100
+write_timeout_ms   = 5000
+
+[defaults.monitoring]
+sampling_interval_ms = 200
+queue_size           = 10
+discard_oldest       = true
+
+[defaults.node]
+writable     = false
+publish_mode = "on_change"
+
+# Group overrides by tag pattern
+[[group]]
+match = "pamas_s40.*"
+monitoring.sampling_interval_ms = 100
+monitoring.queue_size           = 50
+monitoring.discard_oldest       = false
+
+[[group]]
+match = "*.oil_*"
+monitoring.sampling_interval_ms = 50
+
+# Individual tag overrides
+[[tag]]
+name = "delta_as200.oil_flow_set"
+writable = true
+monitoring.sampling_interval_ms = 50
+monitoring.discard_oldest       = false
