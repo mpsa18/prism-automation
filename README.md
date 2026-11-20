@@ -1,5 +1,8 @@
 # Prism
 
+> [!NOTE]
+> **Early Development Preview:** Prism is in active early development. This release includes a **128-tag limit per instance** so you can evaluate the platform, test the bench tools, and share feedback before commercial tiers are introduced.
+
 Prism is an industrial automation gateway. It reads equipment over Modbus,
 S7comm, OPC UA and serial protocols, keeps every value in one tag registry,
 and exposes it to SCADA and IT systems over MQTT, OPC UA, Sparkplug B,
