@@ -12,5 +12,3 @@ instance. Start with [01_getting_started/01_OVERVIEW.md](01_getting_started/01_O
 | [05_wasm](05_wasm/01_PLUGIN_SDK.md) | compute, device, ML and report plugins |
 | [06_operations](06_operations/01_LICENSING.md) | licensing and Windows/Linux/macOS deployment |
 
-Developer material (plans, build guides, protocol notes) lives in `docs/dev/`
-and is not part of the user release.
