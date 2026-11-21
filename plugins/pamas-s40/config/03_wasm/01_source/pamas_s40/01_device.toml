@@ -1,0 +1,43 @@
+# PAMAS S40 particle counter - Prism WASM device driver.
+#
+# Install:
+#   <instance>/plugins/pamas_s40/device_plugin_pamas.wasm
+#   <instance>/config/03_wasm/01_source/pamas_s40/*.toml   (this folder)
+#
+# The plugin only reads new measurements. The serial port is opened by the
+# Prism core; the plugin exchanges bytes over the host serial API.
+
+[[device]]
+name             = "pamas_s40"
+protocol         = "wasm"
+poll_interval_ms = 2000
+timeout_ms       = 10000
+
+[device.reconnect]
+count    = "infinite"
+strategy = "hold_infinite"
+backoff  = "none"
+
+[device.serial]
+serial_port = "COM3"        # Linux/macOS: "/dev/ttyUSB0" or /dev/serial/by-id/...
+baud_rate   = 9600
+data_bits   = 8
+parity      = "none"
+stop_bits   = 1
+
+# Optional: select the port by USB descriptors so COM renumbering is harmless.
+# [device.serial.match]
+# usb_serial = "PAMAS-0001"
+
+[device.wasm]
+module = "../plugins/pamas_s40/device_plugin_pamas.wasm"
+# Options (all optional):
+#   tz_offset_min            local time offset of the instrument clock, minutes
+#                            (e.g. 180 for UTC+3); default 0
+#   clear_after_download     delete the instrument memory after every successful
+#                            download; default false
+#   clear_when_records_above delete records when the memory holds at least N
+#                            measurements; omitted = never
+options = '{"tz_offset_min": 180, "clear_after_download": false}'
+max_memory_mb = 32
+fuel_per_call = 500000000

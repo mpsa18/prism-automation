@@ -190,6 +190,18 @@ device --protocol wasm` creates a device-plugin module. A device driver and a
 compute block that need each other are two modules linked through the tag
 registry — the driver owns tags, the compute block consumes them.
 
+## Plugins
+
+Optional WASM modules published next to the platform:
+
+- [pamas-s40](plugins/pamas-s40/) — PAMAS S40 particle counter (device driver,
+  ABI `prism:device@0.1`): serial port, 16 size channels, GOST 17216 class and
+  measurement time. Also attached to the latest release as
+  `pamas_s40-0.1.0.zip`.
+
+More plugins will appear under [`plugins/`](plugins/). Each folder is
+self-contained: a prebuilt `.wasm`, a sample `config/` and documentation.
+
 ## Documentation
 
 Start with `docs/01_getting_started/01_OVERVIEW.md`.

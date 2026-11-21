@@ -1,0 +1,127 @@
+# Tags published by the PAMAS S40 driver.
+# Values are the mean of the last measurement block (usually 3 runs).
+
+[[device.tag]]
+name = "2um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 2.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "3um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 3.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "4um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 4.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "5um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 5.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "6um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 6.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "7um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 7.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "8um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 8.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "10um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 10.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "15um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 15.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "20um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 20.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "25um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 25.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "30um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 30.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "50um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 50.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "100um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 100.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "150um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 150.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "200um"
+data_type = "dword"
+access = "ro"
+unit = "pcs"
+description = "Particles > 200.00 um (mean of the last measurement block)"
+
+[[device.tag]]
+name = "class"
+data_type = "int"
+access = "ro"
+description = "GOST 17216 purity class (0..17; 18 means >17)"
+
+[[device.tag]]
+name = "timestamp"
+data_type = "dword"
+access = "ro"
+unit = "s"
+description = "Unix time of the last run (instrument clock + tz_offset_min)"
