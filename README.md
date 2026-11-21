@@ -19,7 +19,16 @@ Latest release: https://github.com/mpsa18/prism-automation/releases/latest
 |---|---|---|
 | Windows 10/11 | `prism-<version>-win.zip` | x86-64 |
 | Linux | `prism-<version>-linux.zip` | x86-64 |
+| Linux | `prism-<version>-linux-aarch64.zip` | ARM64 (Raspberry Pi, arm64 SBC) |
+| Linux | `prism-<version>-linux-armv7.zip` | ARMv7 hard-float (glibc) |
+| Linux | `prism-<version>-linux-armv7-musl.zip` | ARMv7 static musl (Buildroot/uclibc, Luckfox Pico) |
 | macOS | `prism-<version>-macos.zip` | Apple Silicon (arm64) |
+| macOS | `prism-<version>-macos-x86_64.zip` | Intel (x86-64) |
+
+On 32-bit ARM, WASM modules run through Wasmtime's Pulley interpreter (no JIT):
+functionality is the same, execution is slower. The static musl build has no
+dependency on the target libc, which makes it the choice for minimal
+Buildroot images.
 
 Every release ships `SHA256SUMS`.
 
@@ -34,29 +43,13 @@ Get-FileHash .\prism-<version>-win.zip -Algorithm SHA256
 ```
 
 The repository also contains the unpacked trees (`prism-win/`, `prism-linux/`,
-`prism-macos/`); the archives in Releases are the recommended download.
+`prism-linux-aarch64/`, `prism-linux-armv7/`, `prism-linux-armv7-musl/`,
+`prism-macos/`, `prism-macos-x86_64/`); the archives in Releases are the
+recommended download.
 
 ## Quick start
 
-1. Unpack the archive.
-2. Open `prism/config/00_core/00_app.toml` and set `instance_name`.
-3. Validate and start:
-
-```bash
-cd prism
-./prism --check-config
-./prism
-```
-
-Windows:
-
-```powershell
-cd prism
-.\prism.exe --check-config
-.\prism.exe
-```
-
-No hardware? Run the bundled example:
+### Try the bundled example (no hardware)
 
 ```bash
 cd examples/tour
@@ -64,17 +57,76 @@ cd examples/tour
 ./prism
 ```
 
-and start the simulated field and debugger from two more terminals:
+Start the simulated field and the debugger from two more terminals:
 
 ```bash
+cd examples/tour
 ./devtools/simulator/prism-sim
+cd examples/tour
 ./devtools/debugger/prism-dbg
+```
+
+### Create a new instance
+
+An **instance** is one self-contained project folder: the binary, `config/`,
+`scripts/`, `plugins/`, `licensing/`, runtime `data/` and `logs/`. Prism
+resolves these paths relative to the binary, so every project lives in its own
+folder.
+
+1. Unpack the archive.
+2. Copy the empty instance that ships in `prism/`:
+
+```bash
+cp -R prism my-project
+cd my-project
+```
+
+```powershell
+Copy-Item -Recurse prism my-project
+cd my-project
+```
+
+3. Open `config/00_core/00_app.toml` and set a unique `instance_name`:
+
+```toml
+[system]
+instance_name = "my-project"
+```
+
+For a second instance on the same machine also change `[debug].listen`
+(default `127.0.0.1:7200`) and the OPC UA server endpoint if enabled.
+
+4. Validate and start:
+
+```bash
+./prism --check-config
+./prism
+```
+
+Windows:
+
+```powershell
+.\prism.exe --check-config
+.\prism.exe
+```
+
+The full guide — templates, adding devices and tags, running several
+instances, upgrading — is `README-NEW-INSTANCE.md` in the release assets
+(also `docs/01_getting_started/05_NEW_INSTANCE.md` in later builds).
+
+Prefer a template project? `prism-devtools init` scaffolds `config/` and
+`scripts/` with `empty`, `minimal`, `standard` or `full` presets:
+
+```bash
+prism/devtools/tooling/prism-devtools init --project my-project --template standard --out my-project
+cp prism/prism.exe my-project/          # Linux/macOS: cp prism/prism my-project/
+cp -R prism/devtools my-project/
 ```
 
 ## What is inside
 
 ```text
-prism/                 working instance: core binary, config, scripts, devtools, plugins
+prism/                 empty working instance: core binary, config, scripts, devtools, plugins
 examples/tour/         complete project that runs without hardware
 docs/                  user guides
 LICENSE                Prism Community edition license
@@ -142,13 +194,14 @@ registry — the driver owns tags, the compute block consumes them.
 
 Start with `docs/01_getting_started/01_OVERVIEW.md`.
 
+- New instances: `README-NEW-INSTANCE.md` (release asset) and
+  `docs/01_getting_started/05_NEW_INSTANCE.md`
 - Bench tools: `docs/03_tooling/01_BENCH_TOOLS.md`
 - Configurator: `docs/03_tooling/06_DEVTOOLS.md`
 - WASM compute modules: `docs/05_wasm/01_PLUGIN_SDK.md`
 - WASM device drivers: `docs/05_wasm/02_DEVICE_DRIVERS.md`
 - ML inference: `docs/05_wasm/03_ML.md`
 - Excel reports: `docs/05_wasm/04_REPORTS.md`
-- ADRC control module: `docs/05_wasm/05_ADRC.md`
 
 The guides are in English; the release also contains `README-RU.md`.
 
@@ -163,5 +216,7 @@ compute, ML and report modules do not add tags of their own.
 
 ## Releases
 
-Each `v*` tag builds Windows, Linux and macOS archives and publishes them here.
-This repository contains release artifacts only; the source code is private.
+Each `v*` tag builds seven archives: Windows x86-64; Linux x86-64, ARM64,
+ARMv7 glibc and ARMv7 static musl; macOS Apple Silicon and Intel. They are
+published here with `SHA256SUMS` and `CHANGELOG.md`. This repository contains
+release artifacts only; the source code is private.
