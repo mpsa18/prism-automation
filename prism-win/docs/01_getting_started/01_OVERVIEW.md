@@ -412,3 +412,4 @@ reference. Helper programs in `devtools/` have their own `--help`; see
 6. [`04_logic/01_RHAI.md`](../04_logic/01_RHAI.md) — calculated tags and logic.
 7. [`02_communication/02_MQTT.md`](../02_communication/02_MQTT.md) and [`02_communication/03_OPC_UA.md`](../02_communication/03_OPC_UA.md) — northbound interfaces.
 8. [`06_operations/01_LICENSING.md`](../06_operations/01_LICENSING.md), [`06_operations/02_LINUX_DEPLOYMENT.md`](../06_operations/02_LINUX_DEPLOYMENT.md), [`06_operations/03_MACOS_DEPLOYMENT.md`](../06_operations/03_MACOS_DEPLOYMENT.md) — licensing and production deployment.
+9. [`01_getting_started/05_NEW_INSTANCE.md`](05_NEW_INSTANCE.md) — create a new project instance, add devices, run several instances, upgrade an existing one.
