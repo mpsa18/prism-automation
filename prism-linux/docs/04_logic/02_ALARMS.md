@@ -239,16 +239,21 @@ Alarm writes are **not advisory**. With `hold = true` (the default):
 
 - the `on` value is written on activation and **held** while the rule is
   active; every reader sees it;
-- the alarm tier is above everything else, including `prism-dbg` force/freeze:
-  commands, scripts, compute blocks, Rhai and debug overrides are refused while
-  the hold is active (`tag is held by active alarm '<id>'`);
-- the signal tag (`alarm.<id>`) is held too, so a debugger cannot hide a live
-  alarm;
+- the alarm tier is above commands, scripts, compute blocks and Rhai, but
+  **below debug force/freeze**: those writers are refused while the hold is
+  active (`tag is held by active alarm '<id>'`), while a debug override is
+  allowed and hides the alarm value for engineering work;
+- the signal tag (`alarm.<id>`) is held too, so ordinary logic cannot hide a
+  live alarm; releasing the debug override reveals the alarm value again;
 - on reset the optional `off` value is written and the hold is released; only
   then can the operator change the output again.
 - several rules may guard the same tag: each owner is tracked, the first in
   rule-id order defines the value, and releasing it hands the hold to the next
-  owner.
+  owner;
+- a held write to the rule's **own source tag** is rejected at load: it would
+  pin the measured value and make the alarm self-latching. Use
+  `hold = false` for a one-shot reset of the source (the example
+  `alarm.oil_setpoint_out_of_range` in `oil-fuel-stand` does this).
 
 `hold = false` keeps the historical one-shot behaviour for pulse commands. It
 is suitable only for momentary actions (horn, acknowledge lamp), never for

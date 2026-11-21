@@ -12,6 +12,14 @@ Prism is a single core with tooling and clients around it:
    - **WASM** — modules for whatever the fixed paths do not cover: SCADA-side logic, reports, ML, protocol adapters (see the WASM note above); declarative Excel reports have their own host (`05_wasm/04_REPORTS.md`);
    Project-specific panels, reports and integrations live in `user/` and are never read by the core.
 
+OPC UA is **one transport, not the only contract**: a tag reaches the SCADA
+through the northbound surfaces its configuration binds (`opc_server` nodes,
+MQTT channels, the SQL bridge, the debug API), and no surface claims a tag
+implicitly. Use OPC UA for typed, server-bound tags; keep MQTT for events,
+alarms, diagnostics and lightweight telemetry; the SQL bridge remains the
+state store for SCADA widgets. A project can bind the same tag to several
+surfaces, but each binding is explicit and owns its address.
+
 ```mermaid
 flowchart TD
     FIELD["Field devices<br/>Modbus · S7comm · OPC UA client · serial"]
@@ -152,19 +160,27 @@ polling is never blocked forever.
 
 | Priority | Source Authority | `TagWriter` | Written by |
 |---|---|---|---|
-| 1 (Highest) | Engineering override via the debug channel | `debug` | debug API `set`; the read-side override layer |
-| 2 | Safety logic and alarm actions | `safety`, `alarm` | fail-preset writes; alarm transitions (`alarm.*` signals, `[[alarm.write]]` actions) |
-| 3 | Compute / control blocks and ML outputs | `control`, `ml` | WASM compute block outputs; ML job outputs |
-| 4 | Operator commands (MQTT / OPC UA) | `command` | MQTT, OPC UA server and OPC DA writes |
-| 5 | Field polling | `poller` | field readbacks; `mirror_to` |
-| 6 (Lowest) | Virtual tags and scripts | `virtual`, `script` | virtual tag evaluation; Rhai `write()` |
+| 1 (Highest) | Engineering force/freeze and debug writes | `debug` | debug API `force`/`freeze`/`set`; the read-side override layer |
+| 2 | Safety logic and alarm actions | `safety`, `alarm` | fail-preset writes; alarm signals, `[[alarm.write]]` actions and holds |
+| 3 | Declarative TOML tag logic | `virtual` | virtual tag `expression`/`initial_value` evaluation |
+| 4 | Rhai scripts | `script` | `scripts/**` and `write()`; virtual tags with `script_func` |
+| 5 | Compute / control blocks and ML outputs | `control`, `ml` | WASM compute block outputs; ML job outputs |
+| 6 | Operator commands (MQTT / OPC UA) | `command` | MQTT, OPC UA server and OPC DA writes |
+| 7 | Field polling | `poller` | field readbacks; `mirror_to` |
+| 8 (Lowest) | Initial values | `init` | configured `initial_value` preset when a device comes online |
 
 Notes:
 
 - The priority decides **same-millisecond collisions between publishes only**;
 it is not ownership. Any newer write passes, so a script write is never
 "blocked" by an older alarm value — and an alarm action cannot be locked onto
-a plant tag against later logic.
+a plant tag against later logic. Keep one logical owner per tag.
+- Runtime writers stamp samples with `clock::now_ms()`; `clock::monotonic_ms()`
+is for deadlines, TTLs and freshness checks only. A protocol source timestamp
+may be kept for display/diagnostics, but arbitration compares host time.
+- An active alarm hold blocks every writer below `alarm`, but a **debug
+  force/freeze is above it**: the debugger can inspect and override an
+  alarm-owned tag, and releasing the override reveals the alarm value again.
 - Physical targets are **not** arbitrated here: commands land in the device
 write queue and the wire sees the queue order. Keep one logical owner per
 plant tag (Rhai/WASM/alarm): see

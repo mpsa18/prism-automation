@@ -1,0 +1,10 @@
+# =============================================================================
+# 04_virtual_tags/defaults.toml — settings for calculated tags
+#
+# Virtual tags have no device and no register: Prism evaluates a Rhai formula.
+# The tags themselves live next to this file in 00_example.toml.
+# =============================================================================
+
+# [defaults]
+# eval_interval_ms = 500
+# data_type        = "float"

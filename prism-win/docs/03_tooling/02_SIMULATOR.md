@@ -10,10 +10,12 @@ overrides.
 ## Command line
 
 ```sh
-prism-sim [--config <file|dir>]                 # terminal: panel; otherwise serve
+prism-sim [--config <file|dir>] [--instance <name>] [--headless|--tui]
+                                                # terminal: panel; otherwise serve
 prism-sim [--config <file|dir>] check [--report <file.json>]
 prism-sim [--config <file|dir>] run [--duration <sec>] [--trace <sel>] [--trace-period <sec>]
 prism-sim [--config <file|dir>] tui
+prism-sim init [--root <dir>] [--force]
 ```
 
 | Command | Behavior |
@@ -22,6 +24,29 @@ prism-sim [--config <file|dir>] tui
 | `check` | Validates the resolved plan, prints devices, tags and problems. Exit `1` on errors. `--report` writes a JSON report. |
 | `run` | Serves without the panel and prints a CSV trace. `--trace` is `outputs` (default), `all`, `none` or a comma-separated tag list; `--trace-period` is in simulated seconds. |
 | `tui` | The interactive panel; requires a terminal (exit `2` otherwise). |
+| `init` | Writes only `devtools/simulator/sim.toml`; never touches `config/**`. Starts with `all_tags = true`. `--force` overwrites an existing file. |
+
+Explicit mode flags override the terminal heuristic: `--headless` serves
+without the panel (the mode to use from `spawn_managed`/`sim_start`),
+`--tui` forces the panel and exits `2` without a terminal. `--instance <name>`
+overrides `[sim].name` for the running process (presence, reports, `stats`,
+TUI title) without editing the bench file.
+
+`prism-sim init` writes the instance folder name into `[sim].name` (not a
+shared `bench`), and `[sim].all_tags`/`[sim].tags` control which config tags
+are served. Keep names unique when several simulators run in one instance:
+the name identifies the bench in `prism-dbg`, in the presence file and in
+`control stats` (`"instance"`), which is how ML/AI tooling binds a dataset to
+a specific simulator. A duplicate live name is reported as a warning.
+
+The core's Rhai engine exposes the same lifecycle by name:
+`sim_start(name)`, `sim_stop(name)` and `sim_status(name)` (`running`,
+`offline`, `missing`). `sim_start` resolves `devtools/simulator/sim-<name>.toml`,
+`<name>.toml`, `<name>/` or a TOML whose `[sim].name` matches, launches it as a
+managed child with `--headless --instance <name>`, and `sim_stop` first stops a
+managed child, otherwise sends `shutdown` through the presence Control API.
+Both are safe to call from `on_init`/`on_close`; managed children are also
+stopped by the runtime's shutdown net.
 
 `--config` points to a bench file or to a folder of flat `*.toml` fragments
 (see [Profile folder next to the binary](#simulator-profile-folder-next-to-the-binary)).
@@ -30,10 +55,14 @@ executable location, or `devtools/simulator/sim.toml`.
 
 Exit codes: `0` success, `1` `check` findings, `2` usage or internal error.
 
-> **Open the TUI full screen.** The panel shows `TAG / ROLE / VALUE / QUALITY /
-> AGE / FORCED / TYPE / ADDRESS` and the behaviour/producer notes. A narrow
-> terminal hides the address/behaviour columns and the reload banner — exactly
-> the information needed while simulating a stand.
+> **Open the TUI full screen.** The panel shows `TAG / ROLE / VALUE / FORCED`
+> and the config passport (`TYPE / ADDRESS / UNIT / ACCESS`) as the terminal
+> widens, plus the behaviour/producer notes. Unlike `prism-dbg` there is no
+> `QUALITY` or `AGE` column: the simulator *is* the source of the process
+> image, so those cells would only ever repeat a fabricated value. The
+> selected-tag line adds the config description, active override, producer and
+> consumers. A narrow terminal hides the passport/behaviour columns and the
+> reload banner — exactly the information needed while simulating a stand.
 
 ## Two sides of the same panel
 
@@ -53,17 +82,23 @@ The simulator panel is the mirror of `prism-dbg` from the **field side**:
   address and served endpoint in the note; the core debugger shows the
   northbound view side by side).
 
-The panel keys are: `v` field/top, `Enter` action menu, `s` set, `f` force,
+The panel keys are: `↑/↓` move, `Space` mark/unmark, `a` mark all visible,
+`A` clear marks, `v` field/top, `Enter` action menu, `s` set, `f` force,
 `x` freeze, `r` release, `R` release all, `p` pause, `y`/`n` hot-reload,
-`?` full help, `/` filter.
+`/` filter.
+
+`Space` marks tags; actions then apply to every marked tag, or to the selected
+row when nothing is marked. Marks survive filtering and row rebuilds. The
+detail line shows the marked count.
 
 `Enter` opens the action menu. The menu is compact
 (`1 Set · 2 Force · 3 Freeze · 4 Release · 5 Restore`): digits pick and apply
 an action immediately, `↑/↓` + `Enter` does the same. The line under it
 explains the highlighted action. Both the menu and the key hint wrap on narrow
 terminals, and the layout reserves their lines, so the last key never
-disappears. `Set` and `Force` ask for a number, the other actions apply at
-once. Without the menu, `s` / `f` open the same prompts directly.
+disappears. `Set` and `Force` ask for one number and apply it to every target;
+the other actions apply at once. Without the menu, `s` / `f` open the same
+prompts directly.
 
 | Action | Meaning |
 |---|---|
@@ -83,10 +118,11 @@ The bench file adds only what `config/**` cannot express:
 
 ```toml
 [sim]
-name    = "plc1-bench"   # shown in the panel and in `prism-dbg`
-tick_ms = 50             # scan period
-speed   = 1.0            # 1.0 = real time, 1000 = a day in ~86 s
-seed    = 1              # deterministic sensor noise
+name     = "plc1-bench"  # unique instance name; defaults to the instance folder
+tick_ms  = 50            # scan period
+speed    = 1.0           # 1.0 = real time, 1000 = a day in ~86 s
+seed     = 1             # deterministic sensor noise
+all_tags = true          # false + tags = [...] simulates only that subset
 
 [control]                # Control API endpoint for prism-dbg
 listen  = "127.0.0.1:7100"
@@ -130,7 +166,12 @@ addresses are re-read from `config/**` on every start:
   `config/01_southbound/03_opc_client/**` gets an OPC UA server at its
   `[device.opcua].endpoint` (see below);
 - virtual tags of `config/01_southbound/04_virtual_tags/**` are held at their
-  `initial_value`; the simulator never evaluates Rhai (the SUT does).
+  `initial_value`; the simulator never evaluates Rhai (the SUT does). A write
+  to a virtual tag from the panel changes only the bench copy — the core owns
+  the real tag. The panel says so (`bench copy only`) instead of implying the
+  SUT accepted the value; use `prism-dbg` or the SCADA to exercise the core.
+  The simulator also does not apply the core's `min`/`max` write limits to
+  virtual tags: those are validated by the SUT write path.
 
 Bench overrides are explicit and never edit the project config:
 
@@ -219,8 +260,9 @@ name = "heater.temperature"        # PV
 behavior = { kind = "temperature", input = "heater.duty", gain = 120.0, tau = 90.0, ambient = 20.0, delay_ms = 2000, noise = 0.05, min = 0.0, max = 200.0 }
 ```
 
-Drive `heater.duty` from the core (ADRC/PID) and watch the PV in `prism-dbg`:
-the loop closes through the same Modbus/OPC UA address the real stand uses.
+Drive `heater.duty` from the core (a control loop) and watch the PV in
+`prism-dbg`: the loop closes through the same Modbus/OPC UA address the real
+stand uses.
 
 ## Serial lab (RTU / ASCII)
 
@@ -353,7 +395,7 @@ module = "plugins/digital_twin/furnace.wasm"   # relative to config/
 "T_amb" = 20.0
 
 [[dtasm.input]]
-tag = "heater.duty"        # Prism tag written by the core (ADRC/PID)
+tag = "heater.duty"        # Prism tag written by the core (control loop)
 variable = "u"             # dtasm input variable
 
 [[dtasm.output]]
@@ -391,6 +433,7 @@ Modbus/OPC UA addresses of their subset, so one core still sees all devices.
 [sim]
 name = "plc1"
 devices = ["plc1"]          # only this device module
+all_tags = false           # use the allowlist below
 # tags = ["plc1.*"]         # optional narrower allowlist (globs)
 # exclude_tags = ["plc1.debug_*"]
 
@@ -421,8 +464,11 @@ Rules:
 - `devices` is an allowlist of device-module prefixes (`plc1`, `flow_meter`,
   `virtual`, ...). Empty means every device.
 - `exclude_devices` removes devices even when `devices` is empty.
-- `tags` is an allowlist of globs (`*`, `?`); empty means every tag of the
-  selected devices.
+- `all_tags` (default `true`) takes every tag of the selected devices from
+  `config/**`. With `all_tags = true`, a non-empty `tags` list is ignored with
+  a warning.
+- With `all_tags = false`, `tags` is the allowlist of globs (`*`, `?`); an
+  empty list selects no tags (also warned).
 - `exclude_tags` removes globs after the allowlist.
 - The filter applies to the image, Modbus maps and OPC UA nodes. A process
   without `plc2` in `devices` does not create `plc2.*` tags at all.
@@ -460,6 +506,7 @@ devtools/simulator/plc1/
 [sim]
 name = "plc1"
 devices = ["plc1"]
+all_tags = false
 tags = ["plc1.*"]
 exclude_tags = ["plc1.debug_*"]
 

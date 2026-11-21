@@ -1,4 +1,4 @@
-# Prism 0.1.0 — getting started
+# Prism 0.1.1 — getting started
 
 This is a ready-to-use bundle. Nothing needs to be installed: every program is
 already built and sits next to this file. There are three entry points, from

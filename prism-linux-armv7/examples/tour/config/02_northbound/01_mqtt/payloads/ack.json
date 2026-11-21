@@ -1,0 +1,6 @@
+{
+  "disabled": "{{disabled}}",
+  "name": "{{name}}",
+  "ns_name": "{{namespace}}",
+  "value": "{{value}}"
+}

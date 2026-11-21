@@ -1,0 +1,12 @@
+{
+  "acknowledged": "{{acknowledged}}",
+  "active": "{{active}}",
+  "alarm_type": "{{type}}",
+  "device": "{{namespace}}",
+  "limit": "{{limit}}",
+  "message": "{{message}}",
+  "priority": "{{priority}}",
+  "tag": "{{name}}",
+  "ts": "{{timestamp}}",
+  "value": "{{value}}"
+}

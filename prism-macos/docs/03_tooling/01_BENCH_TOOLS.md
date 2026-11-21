@@ -48,14 +48,14 @@ print ordinary lines and can run in a service or CI.
 
 - The helpers arrive ready to run; there is nothing to build or install. On
   Linux and macOS the `.exe` suffix is omitted.
-- `sim.toml`, `scan.toml` and `sniff.toml` are starting files next to the tool
-  that owns them. The release pack ships all three. In a project created by
-  `prism-devtools init`, only `sim.toml` exists; run `prism-scan --init` and
-  `prism-sniff --init` once to write the other two. **No tool creates a config
-  on its own** and none overwrites an existing file without `--force`.
-- `devtools/tooling/generators/` is written by `init` and shipped in the release
-  pack, so `generate mqtt`, `generate opc-client`, `generate opc-server` and
-  `generate tags` work without creating a config by hand.
+- Each tool owns its config: `prism init` writes the instance skeleton,
+  `prism-sim init` writes `devtools/simulator/sim.toml`, `prism-scan --init`
+  writes `scan.toml`, and `prism-sniff --init` writes `sniff.toml`. No command
+  overwrites an existing file without `--force`.
+- `devtools/tooling/generators/` is written by `prism-devtools init` (or
+  `init mqtt|opc-client|opc-server|tags|all` for one tool) and shipped in the
+  release pack, so `generate mqtt`, `generate opc-client`, `generate opc-server`
+  and `generate tags` work without creating a config by hand.
 - **Single source of truth: `config/**`.** The simulator and the debugger read
   the tag universe, register maps, declared types, initial values and device
   addresses from it. There is no generated copy to refresh.
@@ -116,6 +116,7 @@ devtools/scanner/prism-scan --dry-run   # validate a scan plan without connectin
 | Run a project with no hardware | `prism-sim` |
 | See why a device is offline, force a test value, read raw Modbus | `prism-dbg` |
 | Find devices, unit ids and register maps before writing config | `prism-scan` |
+| Import a tag map from STEP 7, TIA Portal, a gateway or a CSV/JSON export | `prism-scan` (`[[import]]`, `--export-map`) |
 | Watch or record traffic on a live bus | `prism-sniff` |
 | Create tags, a device, an alarm, northbound config or a whole project | `prism-devtools` |
 
@@ -129,6 +130,9 @@ devtools/scanner/prism-scan --dry-run   # validate a scan plan without connectin
 | `pause` / `resume` / `shutdown` answer `unsupported` | These are simulator-only. The core debug API serves reload commands; `force`/`freeze`/`release` work against both. |
 | `prism-sniff` cannot open a COM port | Windows COM ports are exclusive-use; use a listen-only adapter, a gateway monitor port, or an inline virtual pair. |
 | `scan.toml` / `sniff.toml` not found | Run the tool's `--init` (or pass `--config`); configs are never created silently. |
+| `prism-scan` reports one PLC on several unit ids | The Modbus TCP server ignores the unit id. `[scan] dedupe_units` (default `true`) keeps the lowest; narrow `units = "1"` or set `dedupe_units = false` only for a real gateway. |
+| `prism-scan` generates registers that are not in the PLC | Modbus has no map discovery and many servers answer unmapped reads with zeros. Scan the known range from the PLC program and use an explicit `data_type`; low-confidence `auto` tags are listed as comments, not written. Or import the project map with `[[import]]`. |
+| `prism-scan` skips imported S7 DB rows | The DB is optimized or the export has a symbolic address. Export a non-optimized DB with absolute offsets, use TIA Openness, or use an OPC UA server. |
 | Reload stays `pending` | The change is staged: confirm with `prism-dbg control reload_confirm` or `y` in the panel. |
 
 ## Tool pages

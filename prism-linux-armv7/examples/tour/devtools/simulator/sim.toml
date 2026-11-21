@@ -1,0 +1,64 @@
+# =============================================================================
+# devtools/simulator/sim.toml — the simulated PLC for the tour
+#
+# `prism-sim` replaces real hardware with a small physical model. It reads the
+# device list, addresses and register maps from config/ (the single source of
+# truth) and listens where the program expects the PLC: 127.0.0.1:15020, unit 1.
+# Nothing in config/ changes when the simulator is used instead of a real PLC.
+#
+# This file adds only what the configuration cannot express: how the values
+# move, how often they are recalculated, and where the manual control API
+# listens.
+#
+# Safe to change: gain, tau, ambient, tick_ms, speed.
+# =============================================================================
+
+[sim]
+name        = "tour-bench"
+description = "Tour heater and pump"
+tick_ms     = 50      # recalculate 20 times per second
+speed       = 1.0     # 1.0 = real time, 10.0 = ten times faster
+seed        = 1
+
+[control]
+# The debugger and scripts can nudge the model here.
+listen = "127.0.0.1:7100"
+
+# ── Heater ────────────────────────────────────────────────────────────────────
+# The operator's setpoint is the actuation signal. The first-order thermal model
+# warms the measured temperature towards it: gain 1.0 means 60 °C setpoint ->
+# 60 °C steady state, and tau = 30 s is how fast it gets there.
+[[objects]]
+id            = "heater"
+input         = "tour_plc.setpoint"
+output        = "tour_plc.temperature"
+initial_input = 60.0     # the setpoint value the model starts with
+input_delay   = 0.0
+
+[objects.model]
+kind     = "thermal_1st"
+gain     = 1.0
+tau      = 30.0
+ambient  = 20.0          # temperature with zero input
+initial_output = 20.0    # start cold, so the warm-up is visible
+
+# A little measurement noise, as on a real sensor.
+[objects.sensor]
+noise_std = 0.05
+
+# ── Pump ──────────────────────────────────────────────────────────────────────
+# The pump coil produces pressure with a first-order build-up. With the coil on
+# (1.0) the steady-state pressure is gain * (1 - start_input) = 1.0 bar; with
+# the coil off the pressure decays back to zero.
+[[objects]]
+id            = "pump"
+input         = "tour_plc.pump_run"
+output        = "tour_plc.pressure"
+initial_input = 0.0
+
+[objects.model]
+kind        = "pump_flow"
+gain        = 2.0
+tau         = 4.0
+start_input = 0.5
+max_flow    = 4.0

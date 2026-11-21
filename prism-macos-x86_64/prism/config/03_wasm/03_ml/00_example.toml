@@ -1,0 +1,33 @@
+# =============================================================================
+# 03_ml/00_example.toml — ML inference jobs (commented example)
+#
+# An ML plugin evaluates a model (usually ONNX) on a schedule and writes the
+# result to tags. The .wasm artifact is built for the prism:ml contract;
+# `prism-devtools ml new <name>` creates a complete plugin project.
+# =============================================================================
+
+# [defaults]
+# enabled       = true
+# replay        = false
+# result_ttl_ms = 5000
+#
+# [[plugin]]
+# id            = "anomaly"
+# path          = "../plugins/anomaly/anomaly.wasm"
+# model         = "../models/anomaly_v1.onnx"
+# timeout_ms    = 500
+# max_memory_mb = 128
+#
+# [[job]]
+# name      = "temperature_anomaly"
+# plugin    = "anomaly"
+# period_ms = 1000
+#
+# [[job.feature]]
+# tag         = "plc1.temperature"
+# kind        = "history"       # value | history
+# window_ms   = 60000
+# max_samples = 128
+#
+# [[job.output]]
+# tag = "calculations.temperature_anomaly"

@@ -1,0 +1,27 @@
+# =============================================================================
+# 01_source/00_example.toml — a WASM device driver (commented example)
+#
+# A device plugin owns devices and their tags. The core opens the serial port
+# or socket; the plugin parses the protocol. The .wasm artifact is built for
+# the prism:device@0.1 contract (see docs/05_wasm/02_DEVICE_DRIVERS.md).
+# =============================================================================
+
+# [[device]]
+# name             = "pamas_s40"
+# protocol         = "wasm"
+# poll_interval_ms = 2000
+# timeout_ms       = 10000
+#
+# [device.serial]
+# serial_port = "COM3"
+# baud_rate   = 9600
+#
+# [device.wasm]
+# module = "../plugins/pamas_s40/device_plugin_pamas.wasm"  # relative to config/
+# # options = '{"key": "value"}'
+# # max_memory_mb = 64
+#
+# [[device.tag]]
+# name      = "count"
+# data_type = "dword"
+# access    = "ro"

@@ -1,0 +1,171 @@
+# Declarative configuration for MQTT Telemetry & Topics Generator.
+# Defines input targets, broker defaults, channels (topics + payload
+# templates) and tag/group overrides.
+#
+# v4: transportation is described by [[channel]] entries — they are emitted
+# into hand-managed config/02_northbound/01_mqtt/channels.toml (topics and contracts), while JSON
+# payload templates live in config/02_northbound/01_mqtt/payloads/*.json (seeded once, then
+# edited by hand). topics.toml and `[json]` are not used in this mode.
+#
+# Directory mode generates config/02_northbound/01_mqtt/tags.toml, config/02_northbound/01_mqtt/channels.toml
+# and config/02_northbound/01_mqtt/payloads/*.json. Hand-managed files (broker.toml,
+# channels.toml, payloads) are seeded from the sections below ONLY when
+# missing; `generate mqtt --apply-hand` synchronizes the described content.
+
+[generator]
+kind         = "mqtt"
+output_dir   = "config/02_northbound/01_mqtt"            # Generates tags.toml
+on_collision = "error"                  # error | skip | rename
+dry_run      = false
+report_path  = "data/mqtt_generator_report.json"
+# layout     = "single"                 # single (channels.toml) | split (channels.d/<contract>/<id>.toml)
+
+# Targets: specific files (strictly that file) or directories (recursive)
+targets = [
+  "config/01_southbound/01_modbus",
+  "config/01_southbound/02_s7comm",
+  "config/01_southbound/04_virtual_tags",
+]
+
+# ─── Seed for hand-managed broker.toml ──────────────────────────────────
+
+[broker]
+host           = "localhost"
+port           = 1883
+keep_alive_sec = 60
+clean_session  = true
+inflight       = 100
+
+[defaults]
+alarm_heartbeat_ms    = 0     # all active alarms, every N ms (0 = transitions only)
+critical_heartbeat_ms = 0     # critical/emergency cadence (0 = off; takes over from the general one)
+fail_heartbeat_ms     = 0
+
+[defaults.telemetry]
+enabled         = true
+mode            = "batch"              # on_change | periodic | hybrid | batch
+qos             = 0
+retain          = true
+min_interval_ms = 20
+min_delta       = 0.01
+
+[defaults.commands]
+enabled    = true
+qos        = 1
+timeout_ms = 5000
+
+# ─── v4: каналы (эмитятся в channels.toml) ──────────────────────────────
+# Контракты: telemetry | command | ack | alarm | fail | status | tag_status |
+# diagnostic | control.alarm_ack | control.clear_alarms | control.reload |
+# control.plugin_confirm. Пейлоады каналов: payloads/*.json с маркерами
+# {{...}} (создаются один раз при отсутствии, дальше правятся руками).
+
+[[channel]]
+id       = "telemetry"
+contract = "telemetry"
+topic    = "prism/telemetry"
+envelope = "payloads/telemetry.envelope.json"
+item     = "payloads/telemetry.item.json"
+
+[[channel]]
+id       = "command"
+contract = "command"
+topic    = "prism/command/set"
+
+[[channel]]
+id       = "command_ack"
+contract = "ack"
+topic    = "prism/command/ack"
+item     = "payloads/ack.json"
+
+[[channel]]
+id       = "alarm"
+contract = "alarm"
+topic    = "prism/event/alarm/{severity}"
+item     = "payloads/alarm.json"
+
+[[channel]]
+id       = "fail"
+contract = "fail"
+topic    = "prism/event/fail/{device}"
+item     = "payloads/fail.json"
+
+[[channel]]
+id       = "status"
+contract = "status"
+topic    = "prism/status"
+item     = "payloads/status.json"
+
+[[channel]]
+id       = "tag_status"
+contract = "tag_status"
+topic    = "prism/status"
+item     = "payloads/tag_status.json"
+
+[[channel]]
+id       = "diagnostic"
+contract = "diagnostic"
+topic    = "prism/event/diag/{severity}"
+item     = "payloads/diagnostic.json"
+
+[[channel]]
+id       = "alarm_ack"
+contract = "control.alarm_ack"
+topic    = "prism/event/alarm/ack/{namespace}/{name}"
+
+[[channel]]
+id       = "clear_alarms"
+contract = "control.clear_alarms"
+topic    = "prism/command/clear_alarms"
+
+[[channel]]
+id       = "reload"
+contract = "control.reload"
+topic    = "prism/command/reload"
+
+[[channel]]
+id       = "plugin_confirm"
+contract = "control.plugin_confirm"
+topic    = "prism/control/plugin/confirm"
+
+# [hooks] — Rhai-хуки для кастомизации payload конкретных тегов (опционально).
+# Имена функций определяются в scripts/*.rhai; сигнатура: fn(ns, name, payload).
+# Вернуть () из telemetry/ack-хука → не публиковать; из command-хука → отклонить.
+#
+# [hooks]
+# telemetry = "mqtt_telemetry"
+# command   = "mqtt_command"
+# ack       = "mqtt_ack"
+#
+# [[hooks.tag]]
+# tag       = "delta_as200.valve_1"
+# telemetry = "valve_payload"
+
+# ─── Group and tag rules (emitted into tags.toml) ───────────────────────
+
+# Group overrides by tag pattern
+# Правило без совпадений — мёртвое: генератор предупредит (collect_reference_warnings).
+[[group]]
+match                     = "pamas_s40.*"
+telemetry.mode            = "on_change"
+telemetry.qos             = 1
+telemetry.min_interval_ms = 100
+
+[[group]]
+match                     = "delta_as200.oil_*"
+telemetry.qos             = 1
+telemetry.min_interval_ms = 200
+
+# Виртуальные теги пересчитываются каждые eval_interval_ms (config/01_southbound/04_virtual_tags/
+# defaults.toml) и каждый тик отдают событие телеметрии. В режиме batch
+# одинаковые значения уходили на фронт дважды в секунду; hybrid публикует
+# по изменению, а min_interval_ms работает как heart-beat — у фронта нет
+# механизма запроса снимка, поэтому ему нужен редкий повтор.
+[[group]]
+match                     = "pump_values.*"
+telemetry.mode            = "hybrid"
+telemetry.min_interval_ms = 5000
+telemetry.retain          = true
+
+# Individual tag overrides (commands → [[command]], telemetry → [[telemetry_tag]]).
+# Тег обязан существовать в конфиге устройств: мёртвый override молча игнорируется.

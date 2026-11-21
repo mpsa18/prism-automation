@@ -9,6 +9,10 @@ It works on one **instance root**: the directory that contains `config/`. The
 simulator, debugger, scanner and sniffer are separate tools covered in
 [`01_BENCH_TOOLS.md`](01_BENCH_TOOLS.md).
 
+Developer-only commands (`notices`, `instance`, `release build`) are hidden
+from the user-facing `--help`; run `prism-devtools --help-all` (or `--dev`) in
+a source tree to see them. They are not part of this reference.
+
 ## Command map
 
 | Command | Purpose |
@@ -18,13 +22,15 @@ simulator, debugger, scanner and sniffer are separate tools covered in
 | `generate opc-client` | Write OPC UA client endpoint config. |
 | `generate opc-server` | Write the OPC UA server address space. |
 | `generate tags` | Add a batch of southbound tags from a pattern or declarative spec. |
-| `init` | Create a new project tree from a template preset. |
+| `init` | Create a new project tree, or with a tool name only that generator config. |
 | `ml new` | Create a self-contained Rust ML plugin project and module config. |
 | `scaffold` | Create one device, tag, virtual tag, alarm, history entry, script, poll or protocol defaults file. |
 | `inventory update` | Refresh the tag ledger (`data/tag_inventory.csv`) from the current configuration. |
 | `inventory export` | Write a filtered CSV/TSV/JSON view of the tag ledger. |
 | `import inventory` | Rebuild southbound tag files from a TOML inventory or the CSV ledger. |
 | `trim mqtt` | Report or remove MQTT rules that reference tags that no longer exist. |
+| `trim opc-client` | Report or remove `[[endpoint.tag]]` entries whose tag is gone. |
+| `trim opc-server` | Report or remove `[[node]]` entries whose tag is gone. |
 | `migrate layout` | Move legacy role folders and files into the numbered layout. |
 
 ## Common conventions
@@ -45,7 +51,7 @@ exception: it takes `--out` for the project location and has no `--root`.
 | `1` | Findings: validation errors, drift/missing generated files, `--check` failures, stale MQTT rules, migration conflicts, or an inventory write failure. |
 | `2` | Usage error, missing required config, or a load/internal error. |
 
-`validate rhai` exits `0` when only warnings are reported. `trim mqtt --apply`
+`validate rhai` exits `0` when only warnings are reported. `trim … --apply`
 exits `0` after a successful rewrite. `init` and `ml new` use `1` for a
 scaffolding failure and `2` for bad arguments.
 
@@ -384,6 +390,8 @@ prism-devtools generate tags --device io_controller --name flow --stdout
 ```bash
 prism-devtools init [--project <name>] [--template empty|minimal|standard|full]
     [--out <dir>] [--repo <dir>]
+prism-devtools init <mqtt|opc-client|opc-server|tags|all>
+    [--root <dir>] [--force]
 ```
 
 | Preset | Content |
@@ -409,12 +417,30 @@ success the project tree is written, including its `config/`, `scripts/`,
 `devtools/simulator/sim.toml` and the generator templates in
 `devtools/tooling/generators/`.
 
+**Tool init.** With a tool name, `init` writes only that generator config under
+`<root>/devtools/tooling/generators/` and never touches `config/**` or the
+other tools:
+
+| Argument | File |
+|---|---|
+| `mqtt` | `mqtt.toml` |
+| `opc-client` | `opc_client.toml` |
+| `opc-server` | `opc_server.toml` |
+| `tags` | `tags.toml` |
+| `all` | all four (existing files are kept) |
+
+`--root` defaults to the discovered instance; `--force` overwrites an existing
+file. A single existing file without `--force` is an error (`2`); `all` skips
+existing files and exits `0`.
+
 Examples:
 
 ```bash
 prism-devtools init --project stand-01 --template standard
 prism-devtools init --project demo --template minimal --out projects/demo
 prism-devtools init --project site --template full --repo /opt/prism
+prism-devtools init mqtt --root instances/stand-01
+prism-devtools init all --root instances/stand-01 --force
 ```
 
 Exit codes: `0` success, `1` scaffolding error, `2` usage error.
@@ -718,27 +744,38 @@ prism-devtools import inventory --root . --format csv --device io_controller \
     --file-name 20_imported.toml --check
 ```
 
-## `trim mqtt`
+## `trim`
 
 ```bash
-prism-devtools trim mqtt [--root <dir>] [--apply] [--report <file.json>]
+prism-devtools trim <mqtt|opc-client|opc-server> [--root <dir>]
+    [--apply] [--report <file.json>]
 ```
 
-Scans the MQTT configuration and finds rules that reference tags absent from
-the device configuration: `[[channel.field]]` (`for`/`from_tag`),
-`[[telemetry_tag]]`, `[[command]]` and `[[telemetry_field]]`.
+Scans the selected configuration and finds rules that reference tags absent
+from the device configuration:
+
+- `mqtt` — `[[channel.field]]` (`for`/`from_tag`), `[[telemetry_tag]]`,
+  `[[command]]` and `[[telemetry_field]]`;
+- `opc-server` — `[[node]]` blocks whose `tag` is missing;
+- `opc-client` — `[[endpoint.tag]]` blocks whose `node_id` points at a missing
+  tag. The tag is read from the `ns=…;s=<device>.<tag>` identifier; opaque
+  numeric node ids (`ns=2;i=42`) cannot be checked and are kept.
 
 Without `--apply`, the command only reports. With `--apply`, it rewrites each
-affected file and keeps a `.bak` copy. `--report` writes a JSON summary.
+affected file and keeps a `.bak` copy. `--report` writes a JSON summary. The
+OPC directories are `config/02_northbound/04_opc_client/` and
+`config/02_northbound/02_opc_server/`; `defaults.toml`, `server.toml` and
+`[[endpoint]]` blocks are left untouched.
 
 Exit codes: `0` clean or successfully applied, `1` stale rules found without
 `--apply` (or no device tags found), `2` usage/scan error. When device tags
-exist but the MQTT configuration directory is absent, the command exits `0`.
+exist but the selected configuration directory is absent, the command exits
+`0`.
 
 ```bash
 prism-devtools trim mqtt --root .
-prism-devtools trim mqtt --root . --apply
-prism-devtools trim mqtt --root . --report build/mqtt-trim.json
+prism-devtools trim opc-server --root . --apply
+prism-devtools trim opc-client --root . --report build/opc-trim.json
 ```
 
 ## `migrate layout`

@@ -1,0 +1,17 @@
+# =============================================================================
+# 05_alarms/00_example.toml — one alarm rule (commented example)
+#
+# An alarm holds the signalling tag `alarm.<id>` while the condition is true and
+# writes a row to data/alarms.csv on every transition.
+# =============================================================================
+
+# [[alarm]]
+# id       = "alarm.temperature_high"
+# tag      = "plc1.temperature"
+# priority = "warning"        # info | warning | critical | emergency
+# message  = "Temperature {value} °C is above {limit} °C"
+# for_ms   = 1000             # the condition must hold for one second
+#
+# [alarm.limit]
+# max        = 80.0
+# hysteresis = 2.0            # clears below max - hysteresis

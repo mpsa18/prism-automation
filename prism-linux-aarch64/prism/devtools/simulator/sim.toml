@@ -1,0 +1,28 @@
+# =============================================================================
+# devtools/simulator/sim.toml — simulated field devices (commented example)
+#
+# `prism-sim` reads the device list and register map from config/ and listens
+# where the program expects the PLC. This file adds only the physical model.
+# =============================================================================
+
+# [sim]
+# name        = "bench"
+# description = "Simulated stand"
+# tick_ms     = 50
+# speed       = 1.0
+# seed        = 1
+#
+# [control]
+# listen = "127.0.0.1:7100"
+#
+# [[objects]]
+# id            = "heater"
+# input         = "plc1.setpoint"
+# output        = "plc1.temperature"
+# initial_input = 60.0
+#
+# [objects.model]
+# kind  = "thermal_1st"
+# gain  = 1.0
+# tau   = 30.0
+# ambient = 20.0

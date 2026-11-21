@@ -1,0 +1,44 @@
+# =============================================================================
+# 01_modbus/00_example.toml — a Modbus device and its tags (commented example)
+#
+# Remove the leading "#" from the lines you need. A real device lives in its
+# own subfolder: 01_modbus/<device>/device.toml.
+# =============================================================================
+
+# [[device]]
+# name      = "plc1"
+# protocol  = "modbus"
+# transport = "tcp"
+#
+# [device.tcp]
+# ip      = "192.168.1.10"
+# port    = 502
+# unit_id = 1
+#
+# # Serial transport (RS-485): use [device.serial] instead of [device.tcp].
+# # transport = "rtu"
+# # [device.serial]
+# # serial_port = "COM3"
+# # baud_rate   = 9600
+# # parity      = "none"       # none | even | odd
+# # data_bits   = 8
+# # stop_bits   = 1
+#
+# [[device.tag]]
+# name        = "temperature"
+# address     = 0
+# register    = "input"       # holding | input | coil | discrete
+# data_type   = "word"        # bool | word | dword | int | dint | real | float | string
+# scale       = 0.1
+# access      = "ro"          # ro | rw | wo
+# unit        = "°C"
+# description = "Measured temperature"
+#
+# [[device.tag]]
+# name        = "setpoint"
+# address     = 10
+# register    = "holding"
+# data_type   = "word"
+# scale       = 0.1
+# access      = "rw"
+# unit        = "°C"

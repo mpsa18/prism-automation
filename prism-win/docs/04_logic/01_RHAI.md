@@ -17,6 +17,7 @@
    - [3.4 Alarms from scripts](#34-alarms-from-scripts)
    - [3.5 Calibration and data transforms](#35-calibration-and-data-transforms)
    - [3.6 External processes](#36-external-processes)
+   - [3.7 Simulator instances](#37-simulator-instances)
 4. [Runtime API reference](#4-runtime-api-reference)
 5. [Limits, error policy, diagnostics](#5-limits-error-policy-diagnostics)
 6. [Hot reload](#6-hot-reload)
@@ -551,6 +552,39 @@ Managed mode notes:
 - a **hard kill** of Prism (task manager, `kill -9`) skips the net — the child
   stays, as with any unsaved process state.
 
+### 3.7 Simulator instances
+
+The core can start and stop `prism-sim` benchmarks by their `[sim].name`
+without hard-coding executable paths. This is the supported way to bring test
+benches up and down from `on_init`/`on_close` (ML data collection, CI, demos).
+
+```rhai
+fn on_init() {
+    if sim_status("plc1") != "running" {
+        sim_start("plc1");
+    }
+    sim_start("hydraulics");
+}
+
+fn on_close() {
+    sim_stop("hydraulics");
+    sim_stop("plc1");
+}
+```
+
+| Function | Returns | Notes |
+|---|---|---|
+| `sim_start(name) -> bool` | started/already running | Finds `devtools/simulator/sim-<name>.toml`, `<name>.toml`, `<name>/`, or a TOML whose `[sim].name` matches; launches the simulator as a managed child with `--headless --instance <name>`. `false` when no profile or binary exists. |
+| `sim_stop(name) -> bool` | stopped | Stops a managed child first; otherwise reads `data/simulators/sim-<name>-*.json` and sends `shutdown` through the Control API. Unknown/offline instances return `false`. |
+| `sim_status(name) -> string` | `running` \| `offline` \| `missing` | A live Control API or a managed child counts as running; `missing` means no bench profile is found. |
+
+The bench keeps `[sim].name`, `[sim].description` and `[sim].all_tags`/`[sim].tags`;
+`--instance` only overrides the name for the process (presence, reports, TUI
+title, `stats`). Managed simulators are stopped by the runtime's shutdown net,
+and `sim_start` refuses to spawn a duplicate of a live instance. `sim_start`
+returns after spawning — poll `sim_status(name)` if the next step needs a live
+Control API.
+
 ---
 
 ## 4. Runtime API reference
@@ -631,12 +665,12 @@ Nested loops with interpolated tag names are supported in both build profiles
 - a virtual tag is published immediately (scratch-pads keep the written value
   until the next write).
 
-Script writes are published under the `script` authority — the lowest level of
-the same-millisecond tie-break
+Script writes are published under the `script` authority
 ([`01_getting_started/02_ARCHITECTURE.md`](../01_getting_started/02_ARCHITECTURE.md) §2):
-an alarm action or an operator command wins a same-instant collision
-**by design**, while any newer write (including the next evaluation tick)
-always passes. The arbiter is a same-millisecond tie-break, not ownership.
+below debug force, alarm/safety and declarative TOML tags, and above WASM/ML,
+operator commands and polling in the same-millisecond tie-break. A newer write
+(including the next evaluation tick) always passes: the arbiter is a
+tie-break, not ownership.
 
 Practical rules for auxiliary logic:
 

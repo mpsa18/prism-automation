@@ -19,14 +19,17 @@ timeout_ms = 500           # network connect/read timeout
 serial_timeout_ms = 200    # serial response timeout
 inter_frame_ms = 20        # pause between serial frames
 concurrency = 16           # parallel Modbus TCP / S7 probes
+dedupe_units = true        # one device when several unit ids answer identically
 
 # ── Discovery ────────────────────────────────────────────────────────────────
 
 # Modbus TCP: every host is probed on every port for every unit id.
+# A unit is reported only after a successful read. Units that answer only with
+# a Modbus exception are listed as suspects and are not written to config.
 [[modbus_tcp]]
 hosts = "127.0.0.1"
 ports = "502"
-units = "1"
+units = "1"                # narrow this for a gateway; see dedupe_units above
 
 # Modbus RTU/ASCII. Without `ports` every serial port detected by the OS is
 # scanned. `framing = "auto"` tries RTU and ASCII. Discovery may try several
@@ -55,6 +58,50 @@ units = "1"
 #hosts = "127.0.0.1"
 #ports = "4840"
 
+# ── Import an existing PLC map ──────────────────────────────────────────────
+#
+# An import is the explicit source of truth: imported tags are written as-is,
+# and [[register]] rules only fill the gaps (an imported tag wins by name and
+# by area+address). Use it when the PLC project is available and guessing is
+# not acceptable.
+#
+# `step7` reads a STEP 7 / TIA Portal symbol table exported as CSV. Addresses
+# must be absolute (MW10, DB1.DBW0, DB1.DBX0.0, I0.0, Q0.0). Optimized
+# S7-1200/1500 DBs have no absolute addresses: export a non-optimized DB or
+# use OPC UA.
+#
+#[[import]]
+#path = "symbols.csv"      # relative to this plan
+#format = "step7"          # step7 | csv | json
+#hosts = "192.168.0.10"
+#rack_slots = "0/1"
+## verify = true           # read every imported address once
+#
+# Canonical CSV (any vendor export, or `prism-scan --export-map`):
+#   name,area,address,data_type,word_order,byte_order,byte_permutation,
+#   byte_len,string_format,access,scale,offset,unit,description,db,bit,count
+# `offset` is the engineering offset, not the S7 byte address. `count` expands
+# an array into name_0..name_N (STEP 7 arrays keep the PLC index).
+#
+#[[import]]
+#path = "modbus_map.csv"
+#format = "csv"
+#protocol = "modbus"
+#hosts = "192.168.1.5"
+#ports = "502"
+#units = "1"
+## delimiter = "semicolon" # default: auto-detect comma/semicolon/tab
+## encoding = "auto"      # auto | utf-8 | utf-16 | windows-1251
+## access = "ro"          # default for rows without an access column
+## [import.columns]       # custom header names
+## name = "Tag"
+## area = "Table"
+## address = "Address"
+## data_type = "Data type"
+#
+# `prism-scan --export-map out.csv` writes the discovered map in this canonical
+# form for review, editing and re-import.
+
 # ── Address / register scan of the discovered devices ────────────────────────
 #
 # Rules run after discovery, in file order. A rule matches discovered devices
@@ -74,9 +121,10 @@ units = "1"
 #
 # `auto` discovers the present registers on the word grid, samples them and
 # infers the type and word/byte order from the values. Candidates are paired
-# into dword/dint/real only when the evidence is strong; below
-# `infer_min_confidence` the best guess is still written, with a `verify`
-# comment in the generated TOML.
+# into dword/dint/real only when the evidence is strong. Below
+# `infer_min_confidence` the tag is not written to the generated TOML; it is
+# listed in a comment at the end of the device block, and the JSON report keeps
+# it with `verify = true`.
 #data_type = "auto"
 #infer_samples = 12        # sampling rounds (auto and infer_order)
 #infer_interval_ms = 250   # delay between rounds

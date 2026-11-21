@@ -1,0 +1,35 @@
+# =============================================================================
+# 03_opc_da_bridge/00_example.toml — legacy OPC DA bridge (Windows only)
+#
+# The bridge is a separate executable (bin/bridges/opc_da_bridge.exe). The core
+# reads the mapped tags and counts them towards the license quota.
+# =============================================================================
+
+# [opc_da]
+# prog_id              = "Vendor.OPC.Server.1"
+# host                 = "localhost"
+# apartment_model      = "MTA"       # MTA | STA
+# update_rate_ms       = 100
+# deadband_percent     = 0.0
+# time_bias_minutes    = 0
+# locale_id            = 1033        # 1033 = en-US, 1049 = ru-RU
+# keepalive_interval_ms = 2000
+#
+# [opc_ua_server]
+# endpoint_url     = "opc.tcp://127.0.0.1:4840/Prism/OPCDABridge"
+# server_name      = "Prism OPC DA to UA Bridge"
+# namespace_uri    = "urn:prism:industrial:opc-da-bridge"
+# security_policy  = "None"
+# security_mode    = "None"
+#
+# # tags.toml next to this file maps legacy item IDs to OPC UA NodeIds:
+# [[groups]]
+# name = "Stand"
+# update_rate_ms = 100
+# deadband = 0.0
+#
+#   [[groups.tags]]
+#   item_id       = "Stand.Hydraulics.Pressure_Feed"
+#   node_id       = "ns=2;s=Bridge.Stand.Pressure_Feed"
+#   data_type     = "Float"
+#   access_rights = "ReadOnly"

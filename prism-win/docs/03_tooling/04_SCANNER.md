@@ -51,6 +51,7 @@ with code 2. It never creates a plan by itself; only `--init` writes one.
 | `-c, --config <path>` | Plan file, or a folder of plans. Repeatable. |
 | `--root <dir>` | Output root override for every plan. |
 | `--report <file>` | JSON report path. Only valid with a single plan. |
+| `--export-map <file>` | Write the discovered map as canonical CSV. Only valid with a single plan. |
 | `-n, --dry-run` | Resolve and print the plan and scopes; open no connection. |
 | `--no-generate` | Scan without generating config; a configured report is still written. |
 | `--init [<file>]` | Write the commented plan template. Default: next to the tool. |
@@ -79,12 +80,13 @@ also the quickest way to check a plan.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also used when discovery finds no devices and generation therefore writes nothing. |
-| `1` | Report or generation error (cannot write, validation failed, serial-port conflict, certificate/key missing). |
-| `2` | Usage or plan/config error (unknown option, missing value, no plan found, parse/validation failure, `--report` with several plans, `--init` without `--force`). |
+| `1` | Report, import or generation error (cannot read/write, validation failed, serial-port conflict, certificate/key missing). |
+| `2` | Usage or plan/config error (unknown option, missing value, no plan found, parse/validation failure, `--report`/`--export-map` with several plans, `--init` without `--force`). |
 
 Probe failures do not fail the process: they are printed in the summary, counted,
-and stored in the JSON report. Only report/generation errors and plan/usage
-errors change the exit code.
+and stored in the JSON report. Import rows that cannot be mapped are warnings; a
+missing or unreadable import file is a run error. Only report/import/generation
+errors and plan/usage errors change the exit code.
 
 ## Plan file
 
@@ -101,10 +103,18 @@ timeout_ms = 500         # network connect/read timeout, 1..60000
 serial_timeout_ms = 200  # serial response timeout, 1..60000
 inter_frame_ms = 20      # serial inter-frame gap, 0..10000
 concurrency = 16         # parallel Modbus TCP / S7 probes, 1..256
+dedupe_units = true      # collapse unit ids that answer as one device
 ```
 
 All values are optional and use the defaults shown. `concurrency` is used for
 Modbus TCP and S7 probes; OPC UA discovery runs sequentially.
+
+`dedupe_units` applies to Modbus TCP discovery. Units on the same `host:port`
+are treated as one device when they return the same non-empty FC43 identity
+(vendor/product/revision), or — when neither unit reports an identity — the
+same first successful read. The lowest unit id is kept and the device note
+lists the aliases (`units 1-5 answered identically; kept unit 1`). Set it to
+`false` for a gateway that really exposes several devices on one endpoint.
 
 ### Discovery blocks
 
@@ -146,6 +156,13 @@ frames appear only after byte inversion (RS-485 A/B swapped). S7 reports the CPU
 identity through SZL when the PLC allows it. OPC UA reports the application
 name, application URI and advertised endpoint profiles.
 
+On Modbus TCP a unit is reported only after at least one successful read. A
+unit that answers only with a Modbus exception (for example `illegal data
+address`) is listed in the summary as a **suspect** and is not written to
+config: an exception proves that a Modbus stack answered, not that the unit is
+a distinct device. Inspect a suspect directly with `prism-dbg --modbus
+<host:port> --unit <n> modbus read 3 0 1` before adding it to a plan.
+
 Discovery is read-only: no coil, holding register or OPC UA node is written.
 
 Serial discovery finds only the line settings and unit ids. Register/tag
@@ -153,6 +170,90 @@ enumeration over RTU/ASCII is done by the `[[register]]` rules below, reusing
 the discovered settings when the port is opened. Enable both a
 `[[modbus_serial]]` block and a matching `[[register]]` rule, otherwise the scan
 reports devices but produces no tags.
+
+## Importing a PLC map
+
+When the PLC project is available, import its map instead of guessing. Modbus
+has no register-map introspection, and S7comm exposes addresses but not
+symbols; the engineering project is the source of truth for ranges and types.
+
+```toml
+[[import]]
+path = "symbols.csv"       # relative to the plan
+format = "step7"           # step7 | csv | json
+hosts = "192.168.0.10"
+rack_slots = "0/1"
+verify = true              # read every imported address once
+```
+
+### STEP 7 / TIA Portal symbol tables
+
+Upload the station in STEP 7 (or open the project in TIA Portal), export the
+symbol table or PLC tag table as CSV, and use `format = "step7"`. The importer
+accepts `MW10`, `MD20`, `M0.0`, `I0.0`/`E0.0`, `Q0.0`/`A0.0`, `PE`/`PA` and
+`DBn.DBX/DBB/DBW/DBD` addresses, and maps `BOOL`, `WORD`, `DWORD`, `INT`,
+`DINT`, `REAL`, `CHAR`, `STRING[n]` and one-dimensional
+`ARRAY[lo..hi] of TYPE`. `BYTE`, timers, counters, `TIME`, `STRUCT`/`UDT` and
+multi-dimensional arrays are skipped with a warning.
+
+The symbol table of an uploaded program contains the symbols declared in it.
+DB fields that are not declared as symbols need the DB source or a TIA
+Openness export. An S7-1200/1500 *optimized* DB has no absolute address; the
+importer reports such rows and skips them. Uncheck *Optimized block access*,
+export through TIA Openness, or use an OPC UA server.
+
+Multi-dimensional arrays, `STRUCT`/`UDT`, `BYTE`, timers/counters and `TIME`
+values are not imported. The scanner does not parse LAD/SCL/STL sources: use
+the symbol table, a TIA Openness export or a hand-maintained canonical
+CSV/JSON for those cases.
+
+### Canonical CSV and JSON
+
+`format = "csv"` accepts these headers (case-insensitive; custom names via
+`[import.columns]`):
+
+```text
+name,area,address,data_type,word_order,byte_order,byte_permutation,
+byte_len,string_format,access,scale,offset,unit,description,db,bit,count
+```
+
+- `area` is `holding`/`input`/`coil`/`discrete` for Modbus and
+  `db`/`mk`/`pe`/`pa` for S7.
+- `offset` is the engineering offset, not the S7 byte address. The S7 byte
+  offset is `address`; `db` and `bit` are separate columns.
+- `count` expands a range into `name_0..name_N` (STEP 7 arrays keep the PLC
+  index: `name_1..name_N`).
+- `byte_permutation` preserves a non-standard 32-bit layout (`a,b,c,d`); it
+  applies to Modbus `dword`/`dint`/`real` only.
+- `scale`, `offset`, `unit` and `description` are written as the corresponding
+  Prism tag fields.
+
+`format = "json"` accepts an array or `{"signals": [...]}` with the same
+fields. This is the easy output contract for a small TIA Openness helper.
+`delimiter` (`comma`/`semicolon`/`tab` or one character) and `encoding`
+(`auto`/`utf-8`/`utf-16`/`windows-1251`) are optional; auto-detection covers
+normal Excel and STEP 7 exports.
+
+### Precedence and device selection
+
+Imports are applied before `[[register]]` rules. An imported tag wins by name
+and by the same `area + address` (plus `db`/`bit` for S7), so a later register
+scan cannot overwrite the explicit map. The block filters discovered devices by
+`hosts`/`ports`/`units` (Modbus) or `hosts`/`ports`/`rack_slots` (S7). Exactly
+one match is required; if none matches and the block names one endpoint, the
+scanner creates a synthetic device, so an import-only plan works without a
+network. `verify = true` reads every imported address once and prints failures;
+it never writes to the PLC.
+
+### Exporting the map
+
+`prism-scan --export-map out.csv` writes the discovered map in the canonical
+CSV form, one row per tag, with `device`, `protocol`, `host`, `port`, `unit_id`,
+`rack`, `slot`, `node_id` and `namespace_uri` columns. Review and edit the
+types/scales, then import the file back. The `device`/`host`/`port` columns are
+ignored by the import block, which uses its own filters. OPC UA rows are
+included in the export but import supports Modbus and S7 only; OPC UA rows are
+skipped with a warning.
 
 ## Register rules
 
@@ -176,7 +277,7 @@ Modbus; a filter that does not apply to the chosen protocol is an error.
 | `infer_order` | `false` | Keep the declared type, infer only the order |
 | `infer_samples` | `12` | Sampling rounds, clamped to 2..200 |
 | `infer_interval_ms` | `250` | Delay between rounds, clamped to 10..60000 |
-| `infer_min_confidence` | `0.85` | Below this the tag is marked `verify`, clamped to 0.3..0.99 |
+| `infer_min_confidence` | `0.85` | Below this — or on an ambiguous order — the tag is not written; it is listed in a comment, clamped to 0.3..0.99 |
 | `byte_len` | `32` | String payload bytes, 1..240 |
 | `string_format` | `s7` | S7 strings: `s7` (2-byte header) or `raw` (CHAR array) |
 | `byte_permutation` | none | Explicit 4-byte order; Modbus 32-bit types only |
@@ -289,6 +390,14 @@ the block until the valid addresses are isolated. Unsupported functions are
 noted and skipped. The scanner sends only read requests: Modbus FC1–4, S7
 read-variable/SZL and OPC UA GetEndpoints/Browse/Read.
 
+Modbus has no register-map introspection. Many servers answer every read —
+including unmapped addresses — with success and zeros, and only `illegal data
+address/value` proves that an address is unmapped. Treat the discovered range
+as a hypothesis: confirm it against the PLC program, HMI tags or the device
+documentation. A narrow range with an explicit `data_type` is more reliable
+than a wide `auto` scan. When the project is available, import its map instead
+(above): the block/bisect probe is a fallback, not an authoritative map.
+
 ## Type and order inference
 
 `data_type = "auto"` switches a rule to a sampled scan. The range is first
@@ -312,8 +421,10 @@ Scoring is conservative:
   independently changing words stay two 16-bit tags.
 - `signed` (`int`/`dint`) is preferred only for values clustered near `0xFFFF`;
   otherwise `word`/`dword` is the safe default.
-- Below `infer_min_confidence` the best candidate is still emitted, but the tag
-  is marked `verify` and the TOML comments list the close alternatives.
+- Below `infer_min_confidence`, or when the order is ambiguous, the tag is not
+  written to the generated TOML. The end of the device block lists its address,
+  type and score; the JSON report still contains the tag with `verify = true`.
+  Set `data_type` explicitly when the address is known from the PLC program.
 
 For Modbus, the four conventional layouts are `ABCD`, `CDAB`, `BADC` and
 `DCBA`. They are preferred on a score tie and are written as
@@ -390,11 +501,14 @@ Emitted keys:
   configured one;
 - coil/discrete tags are `data_type = "bool"`; S7 bool tags also carry `bit`
   inside `[device.tag.s7]`.
+- imported tags also carry `description`, `unit`, `scale` and `offset`
+  (engineering) when the map provides them.
 
 Explicit rules do not sample values and write no `word_order`/`byte_order` keys;
 they write `byte_permutation` only when it was configured explicitly. Only
-sampled rules add the `# prism-scan:`/`# candidates:`/`# note:` comments. A
-low-confidence tag is marked `, verify` on the confidence comment line.
+sampled rules add the `# prism-scan:`/`# candidates:`/`# note:` comments.
+Low-confidence tags are not written; the end of the device block lists them in
+a `# prism-scan: N low-confidence tag(s) not written` comment.
 
 ## Output
 
@@ -436,11 +550,18 @@ All discovered devices of one protocol group are written as multiple
 `[[device]]` blocks in the same file. Device names are `<module>`,
 `<module>_2`, `<module>_3`, and so on.
 
+When several Modbus TCP unit ids share one `host:port`, generation prints a
+warning and adds the same warning as a comment in the file: Prism polls the
+endpoint once per written device. Keep only the real unit, or use a gateway
+that maps each unit to a different device. `dedupe_units` normally prevents
+this before generation.
+
 Set `root` only when the result should stay outside `config/` (for example a
 review copy in `out/`). For `root = "out/01_southbound"` the first file is
 `out/01_southbound/01_modbus/<module>/<file>.toml`. A relative `root`/`report`
 inside `[output]` is resolved from the plan file's directory. The CLI overrides
-`--root` and `--report` are resolved from the current directory. Relative
+`--root`, `--report` and `--export-map` are resolved from the current
+directory. Relative
 certificate/key paths are checked from the directory above the output root
 (normally `config/`) and are written unchanged into the generated device.
 
@@ -452,8 +573,9 @@ existing file untouched. Warnings from the loader are printed.
 
 A JSON report is written only when `report` or `--report <file>` is set (and not
 in `--dry-run`). It contains the discovery time, duration, every discovered
-device and tag, and the probe errors. The generated TOML module is the primary
-result.
+device and tag, the probe errors, the exception-only suspects and the row-level
+import warnings (including failed `verify` reads). The generated TOML module is
+the primary result.
 
 ### Serial ports
 

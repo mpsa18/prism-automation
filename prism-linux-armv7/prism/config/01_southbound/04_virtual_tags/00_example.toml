@@ -1,0 +1,21 @@
+# =============================================================================
+# 04_virtual_tags/00_example.toml — calculated and scratch-pad tags
+# =============================================================================
+
+# [[device]]
+# name     = "calculations"
+# protocol = "virtual"
+#
+# [[device.tag]]
+# name        = "temperature_f"
+# data_type   = "float"
+# unit        = "°F"
+# description = "Temperature in Fahrenheit (calculated)"
+# expression  = 'read("plc1.temperature") * 9.0 / 5.0 + 32.0'
+#
+# [[device.tag]]
+# name          = "maintenance_mode"
+# data_type     = "bool"
+# access        = "rw"
+# initial_value = 0.0
+# description   = "Operator switch used by scripts and alarms"

@@ -1,0 +1,104 @@
+# =============================================================================
+# channels.toml — MQTT topics and message shapes
+#
+# A "channel" ties a kind of data (the contract) to a topic and, optionally, to
+# JSON templates in payloads/. Contracts are fixed by Prism, so the same data
+# always means the same thing; only the topic names and the JSON layout change.
+#
+# Safe to change: id, topic, enabled. Keep the contract names as they are.
+# Topic placeholders: {severity} and {device} are filled automatically.
+# =============================================================================
+
+schema_version = 4
+contract_id    = "prism-mqtt-v4"
+
+# Values of all tags marked for publishing (see tags.toml).
+[[channel]]
+id       = "telemetry"
+contract = "telemetry"
+topic    = "prism/telemetry"
+envelope = "payloads/telemetry.envelope.json"
+item     = "payloads/telemetry.item.json"
+
+# Writes coming from the outside: {"tag":"tour_plc.setpoint","value":75}.
+[[channel]]
+id       = "command"
+contract = "command"
+topic    = "prism/command/set"
+
+# Confirmation of an accepted or rejected write.
+[[channel]]
+id       = "command_ack"
+contract = "ack"
+topic    = "prism/command/ack"
+item     = "payloads/ack.json"
+
+# Alarm became active or was cleared.
+[[channel]]
+id       = "alarm"
+contract = "alarm"
+topic    = "prism/event/alarm/{severity}"
+item     = "payloads/alarm.json"
+
+# A device stopped answering or recovered.
+[[channel]]
+id       = "fail"
+contract = "fail"
+topic    = "prism/event/fail/{device}"
+item     = "payloads/fail.json"
+
+# Device online/offline transitions.
+[[channel]]
+id       = "status"
+contract = "status"
+topic    = "prism/status"
+item     = "payloads/status.json"
+
+# One value of one tag, for receivers that want a stream without batching.
+[[channel]]
+id       = "tag_status"
+contract = "tag_status"
+topic    = "prism/status"
+item     = "payloads/tag_status.json"
+
+# Diagnostics produced by drivers and scripts.
+[[channel]]
+id       = "diagnostic"
+contract = "diagnostic"
+topic    = "prism/event/diag/{severity}"
+item     = "payloads/diagnostic.json"
+
+# ── Control contracts: commands addressed to Prism itself ─────────────────────
+
+# Acknowledge one alarm: prism/event/alarm/ack/<namespace>/<name>
+[[channel]]
+id       = "alarm_ack"
+contract = "control.alarm_ack"
+topic    = "prism/event/alarm/ack/{namespace}/{name}"
+
+# Clear every active alarm.
+[[channel]]
+id       = "clear_alarms"
+contract = "control.clear_alarms"
+topic    = "prism/command/clear_alarms"
+
+# Re-read config/ and apply what changed.
+[[channel]]
+id       = "reload"
+contract = "control.reload"
+topic    = "prism/command/reload"
+
+# Confirm a pending WASM plugin version (hot reload).
+[[channel]]
+id       = "plugin_confirm"
+contract = "control.plugin_confirm"
+topic    = "prism/control/plugin/confirm"
+
+# ── Extra fields (optional) ───────────────────────────────────────────────────
+# Add a field to the payload of selected tags without changing the templates:
+#
+# [[channel.field]]
+# name     = "disabled"
+# for      = "tour_plc.*"                 # one tag or a glob
+# from_tag = "calculations.maintenance_mode"
+# # or: value = 0

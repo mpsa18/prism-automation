@@ -1,0 +1,36 @@
+# =============================================================================
+# 02_s7comm/00_example.toml — an S7 device and its tags (commented example)
+# =============================================================================
+
+# [[device]]
+# name       = "plc_s7"
+# protocol   = "s7comm"
+# plc_serial = "6ES7-312-1AE13-0AB0"
+#
+# [device.s7]
+# host = "192.168.1.20"
+# port = 102
+# rack = 0
+# slot = 2
+#
+# [[device.tag]]
+# name      = "tank_level"
+# data_type = "real"
+# access    = "ro"
+# unit      = "m"
+#
+# [device.tag.s7]
+# area   = "db"              # db | merker | input | output
+# db     = 1
+# offset = 0                 # byte offset inside the area
+#
+# [[device.tag]]
+# name      = "valve_feedback"
+# data_type = "bool"
+# access    = "ro"
+#
+# [device.tag.s7]
+# area   = "db"
+# db     = 1
+# offset = 4
+# bit    = 0

@@ -362,14 +362,19 @@ timeout_ms = 5000             # timeout waiting for the device write
 
 Publish modes:
 - `on_change`: Publish when the value changes by at least `min_delta`.
-- `periodic`: Publish on a fixed cadence.
+- `periodic`: Publish on a fixed cadence, even when the value has not changed.
 - `hybrid`: Periodic heartbeat plus immediate publish on significant changes.
 - `batch`: Accumulate a full state snapshot — unchanged values are re-sent on
   purpose — and flush one JSON array on the shared topic every 500 ms;
   `min_delta` does not apply.
 
 `min_interval_ms` throttles `periodic`/`hybrid`; `min_delta` is the threshold
-for `on_change`/`hybrid`.
+for `on_change`/`hybrid`. `periodic`/`hybrid` have their own publisher timer:
+no new sample is needed for a heartbeat, so a SCADA freshness/age indicator
+does not turn an idle value red while the tag still holds a good sample.
+`on_change` stays silent until the value actually changes. The heartbeat is
+sent only on the channel that is due, so a `batch` channel of the same tag
+does not accumulate duplicates.
 
 ### Group Rules (`[[telemetry_group]]`)
 
@@ -643,11 +648,12 @@ timestamp and is visible to OPC UA, alarms and scripts.
 
 Fields run on every publish attempt, and an attempt happens only
 when the tag is due: on its own change (`on_change`), on the channel timer
-(`periodic`), or both (`hybrid`). `mode = "batch"` re-sends the whole snapshot
-every 500 ms, so a field value is re-read with every flush; in the other modes
-a change of the *source* tag of a field alone does not republish the payload —
-use `periodic`/`hybrid` for state-like fields that must refresh on their own
-timer.
+(`periodic`), or both (`hybrid`). The `periodic`/`hybrid` timer fires even
+when the tag value is unchanged, so the fields are re-read on every heartbeat.
+`mode = "batch"` re-sends the whole snapshot every 500 ms, so a field value is
+re-read with every flush; a change of the *source* tag of a field alone does
+not republish an `on_change` payload — use `periodic`/`hybrid` for state-like
+fields that must refresh on their own timer.
 
 ---
 
@@ -747,9 +753,17 @@ track_namespaces = ["value_table"]
 # Tags (`device.tag` or a bare `tag`) excluded from persistence and restore:
 # their acks are still published to the SCADA, but they are not mirrored to
 # `sql/write`, telemetry of them is not mirrored, and saved rows are dropped
-# from `sql/data` replies. For operator actions that must start from a known
-# state — pump start buttons stay off until pressed again.
+# from `sql/data` replies. A full-state reply reports their live value instead,
+# so a restarted SCADA still shows the current state. For operator actions that
+# must start from a known state — pump start buttons stay off until pressed.
 skip_tags = ["plc1.pump_start"]
+
+# Retention is per tag (`retentive = true/false` in [[device.tag]]). Physical
+# writable commands default to false: after a restart the field is the truth,
+# and a stale row must not re-energize a valve. Virtual/UI tags default to
+# true (table cells, modes, aliases). Explicit `retentive` overrides either
+# default. Non-retentive rows are dropped from restore; a full-state reply
+# reports their live value instead of the saved row.
 
 # On the first full-state reply of the process the saved rows of the tracked
 # namespaces are also written back into the tag registry (once per start):
@@ -778,8 +792,16 @@ The loop:
    UI is expected to update only from acks. The contract carries `ns_name` on
    every item, so rows whose bare tag name the configuration recognizes get it
    added on the way; unknown or ambiguous names pass through unchanged. Rows
-   of `[sql] skip_tags` are dropped here: a saved value of a non-persisted
-   control must not restore it on the SCADA side.
+   of `[sql] skip_tags` and non-retentive command tags are dropped here: a
+   saved value of a non-persisted control must not restore it on the SCADA
+   side. A full-state reply then adds the **live** registry value of those
+   tags instead (when initialized and not `Bad`), so a restarted SCADA
+   initializes buttons and tables from the running process rather than waiting
+   for the next change; the saved row itself never reaches the UI. The ack
+   contract and the DB key rows by bare name, so a live row is only added when
+   the bare name is unambiguous or the tag belongs to a tracked namespace: an
+   untracked raw PLC setpoint cannot shadow the engineering tag of the same
+   name (33.0 % must not become the raw 3300).
    Full-state replies additionally get the `[[sql.default]]` rows merged in
    and, with `[sql] init_fallback`, a fallback row for every tag of the tracked
    namespaces the DB has nothing for (its configured `initial_value` — the
@@ -790,8 +812,8 @@ The loop:
    scripts and logic read the registry, the UI — the acks.
 3. **State capture** — every applied command is mirrored to `sql/write` (the
    same row the ack carries), so a restart restores switches and table state;
-   `value = null` resets are persisted too. Tags of `[sql] skip_tags` are
-   acknowledged to the SCADA but never mirrored.
+   `value = null` resets are persisted too. Tags of `[sql] skip_tags` and
+   non-retentive command tags are acknowledged to the SCADA but never mirrored.
 4. **Measurement mirror** — telemetry of `track_namespaces` is mirrored to
    `sql/write` as it is published (batch snapshots are flushed wholesale),
    keeping cell values written by scripts, the debugger or the devices in the
@@ -807,6 +829,55 @@ The loop:
 channels is missing. Do not run the reference `mock` gateway together with
 Prism: both forward `sql/get`/`sql/data`, and the SCADA would receive duplicate
 acks.
+
+### Retention: state vs. momentary command (`retentive`)
+
+After a restart the bridge has to answer one question per writable tag: is the
+saved row the operator's **intended state**, or just a command that happened to
+be true at the time?
+
+- restoring every writable tag from the DB can re-energize a pump or valve
+  that the PLC has since switched off;
+- restoring nothing loses modes, table indexes and latching valves that must
+  survive a restart.
+
+`[[device.tag]].retentive` makes the answer explicit:
+
+| Value | Meaning | Startup behavior |
+|---|---|---|
+| `true` | Persistent operator state / latching command | The saved row is restored, queued as a normal command, and confirmed by the ack / next poll. |
+| `false` | Momentary command; the field is the truth | The saved row is not restored and not mirrored again. A full-state reply carries the current live value instead, so the SCADA shows the field state without replaying a stale button. |
+| absent | Protocol default | Physical writable commands: `false`; virtual/UI tags: `true`. |
+
+```toml
+# latching valve: keep it open across a restart
+[[device.tag]]
+name      = "oil_main_valve"
+access    = "rw"
+retentive = true
+
+# momentary pump start: never replay it
+[[device.tag]]
+name      = "oil_main_pump_start"
+access    = "rw"
+retentive = false
+```
+
+Why not one global switch?
+
+- always restoring is unsafe: a stale row can switch equipment on;
+- always skipping loses legitimate UI state (table cells, modes, aliases);
+- a global `skip_tags` blacklist is easy to forget and does not say **why** a
+  tag is excluded. `retentive` is the per-tag contract; `skip_tags` remains for
+  tags that must not appear in the DB at all (for example a one-shot pulse).
+
+`retentive = true` is **not** a safety bypass: the restored write is an ordinary
+`command`-authority write. An active alarm interlock, a read-only tag or a bad
+ack still rejects it, and the failure is reported to the SCADA. Before the
+first Good field sample, the tag is shown as `Bad`/`Uncertain`; the SCADA must
+not treat its own cached button as confirmed state. The live-value row of a
+non-retentive tag is omitted while the tag is uninitialized or `Bad`, so a
+missing row means "not confirmed yet", not "false".
 
 ## 9. Eclipse Sparkplug B Northbound (`[sparkplug]`)
 

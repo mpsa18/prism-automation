@@ -1,0 +1,35 @@
+# =============================================================================
+# 04_report/00_example.toml — generated documents (commented example)
+#
+# A report combines a data description with a WASM renderer (XLSX, PDF, ...).
+# It starts on a rising edge of a button tag or periodically and writes the
+# file to disk.
+# =============================================================================
+
+# [defaults]
+# enabled = true
+# poll_ms = 200
+#
+# [[plugin]]
+# id   = "xlsx"
+# path = "../plugins/report/report_plugin_xlsx.wasm"
+#
+# [[report]]
+# name         = "shift_report"
+# plugin       = "xlsx"
+# enabled      = true
+# button_tag   = "plc1.pump_run"
+# reset_button = true
+# output_dir   = "../data/reports"
+# file_name    = "Report_{date}_{time}.xlsx"
+# title        = "Shift report"
+# sheet_name   = "Report"
+#
+# [[report.section]]
+# kind  = "table"
+# title = "Live values"
+#
+# [[report.section.row]]
+# label  = "Temperature, °C"
+# tag    = "plc1.temperature"
+# format = "float1"

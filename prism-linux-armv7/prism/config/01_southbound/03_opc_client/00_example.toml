@@ -1,0 +1,21 @@
+# =============================================================================
+# 03_opc_client/00_example.toml — an external OPC UA server (commented example)
+# =============================================================================
+
+# [[device]]
+# name     = "external_sensor_server"
+# protocol = "opcua"
+#
+# [device.opcua]
+# endpoint        = "opc.tcp://192.168.1.50:4840/"
+# application_uri = "urn:prism:client:external"
+#
+# [[device.tag]]
+# name                 = "remote_flow"
+# node_id              = "ns=2;s=Sensors.FlowRate"
+# data_type            = "real"
+# access               = "ro"
+# unit                 = "l/min"
+# sampling_interval_ms = 200
+# queue_size           = 10
+# discard_oldest       = true

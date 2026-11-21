@@ -1,0 +1,124 @@
+PRISM END USER LICENSE AGREEMENT
+
+Version 1.0
+Effective date: 19 November 2026
+
+Copyright (c) 2026 mpsa18
+Contact: yosipov931@gmail.com
+
+The author publishes the Software under the pseudonym "mpsa18" in accordance
+with Article 1265 of the Civil Code of the Russian Federation.
+
+This End User License Agreement ("EULA") is a legal agreement between you
+("Licensee") and mpsa18 ("Licensor") for the Prism software, including the
+executable programs, configuration templates, scripts and documentation
+distributed together (the "Software"). By installing, copying or using the
+Software, the Licensee accepts this EULA. If the Licensee does not accept it,
+the Licensee must not use the Software.
+
+1. GRANT OF LICENSE
+
+The Licensor grants the Licensee a free-of-charge, non-exclusive,
+non-transferable, non-sublicensable license to install, run and use the
+Software for any number of projects, provided that each running instance of
+the Software has no more than 128 active tags. The license is granted
+worldwide and remains in effect for the duration of the copyright, unless
+terminated under Section 9.
+
+"Active tag" means a tag counted by the Software's built-in tag inventory for
+an instance, as described in the documentation shipped with the Software.
+
+The Software is licensed, not sold. No rights to the source code are granted;
+the source code is not distributed under this EULA.
+
+2. PERMITTED USE
+
+The Licensee may:
+  a) install and use the Software in production, evaluation, education and
+     research;
+  b) install and configure the Software on systems operated by the Licensee,
+     or on a customer's system as part of an integration project performed by
+     the Licensee, provided the Licensee does not charge the customer
+     separately for the Software itself;
+  c) make a reasonable number of backup copies of the Software.
+
+3. RESTRICTIONS
+
+The Licensee must not:
+  a) redistribute, sell, rent, lease, sublicense, publish or otherwise make
+     the Software available as a standalone product or as part of another
+     product whose primary value is the Software;
+  b) provide the Software to third parties as a hosted or managed service;
+  c) modify, translate, decompile, disassemble or reverse engineer the
+     Software, except to the extent expressly permitted by applicable law;
+  d) remove or alter any copyright, license or other proprietary notices;
+  e) circumvent, disable or otherwise interfere with the 128-active-tag limit
+     or any other technical limitation of the Software.
+
+4. TAG QUOTA AND COMMERCIAL LICENSING
+
+The Community edition license covers up to 128 active tags per instance. If an instance
+exceeds that limit, the Software may stop field I/O or enter a limited
+evaluation mode. Use above the free limit requires a separate commercial
+license. The Licensor may offer such licenses at its discretion; this EULA
+does not grant any right to a commercial license or oblige the Licensor to
+provide one.
+
+5. UPDATES AND SUPPORT
+
+The Licensor may, but is not obliged to, provide updates, new versions or
+support. Unless a new license accompanies an update, the update is covered by
+this EULA.
+
+6. THIRD-PARTY COMPONENTS
+
+The Software includes third-party components distributed under their own
+licenses, primarily the MIT License and the Apache License 2.0. Those
+components remain governed by their respective licenses; see the third-party
+license information shipped with the Software. In case of conflict, the
+third-party license prevails for the corresponding component.
+
+7. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. THE LICENSOR
+DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE, UNINTERRUPTED, SECURE
+OR SUITABLE FOR ANY PARTICULAR INDUSTRIAL PROCESS. THE LICENSEE IS SOLELY
+RESPONSIBLE FOR VALIDATING THE SOFTWARE BEFORE USING IT IN PRODUCTION AND FOR
+ALL PROCESS-SAFETY DECISIONS.
+
+8. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR SHALL NOT BE
+LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE
+DAMAGES, OR FOR ANY LOSS OF PROFITS, DATA, PRODUCTION OR BUSINESS, ARISING
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THIS EULA. THE LICENSOR'S TOTAL
+AGGREGATE LIABILITY UNDER THIS EULA SHALL NOT EXCEED THE AMOUNT ACTUALLY PAID
+BY THE LICENSEE FOR THE SOFTWARE, WHICH IS ZERO FOR THE FREE LICENSE.
+
+Nothing in this EULA limits liability that cannot be limited under applicable
+law, including liability for intentional misconduct or gross negligence, or
+for harm to life or health.
+
+9. TERMINATION
+
+This EULA terminates automatically if the Licensee breaches any of its terms.
+On termination the Licensee must stop using the Software and delete all
+copies in its possession or control. Sections 3, 6, 7, 8 and 10 survive
+termination.
+
+10. GOVERNING LAW AND DISPUTES
+
+This EULA is governed by the laws of the Russian Federation. Disputes are
+subject to the courts of the Russian Federation at the Licensor's location,
+unless mandatory rules of the Licensee's jurisdiction provide otherwise. The
+United Nations Convention on Contracts for the International Sale of Goods
+does not apply.
+
+11. CONTACT
+
+Questions about this EULA: yosipov931@gmail.com
+
+This document is the complete agreement between the parties regarding the
+Software and supersedes any prior understandings on the same subject.

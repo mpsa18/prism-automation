@@ -1,0 +1,36 @@
+# =============================================================================
+# bindings.toml — when Rhai scripts run
+#
+# Rhai is the built-in scripting language (scripts/*.rhai). A script can read
+# and write tags, keep state between calls and log messages. This file decides
+# which file runs and when; the logic itself lives in the .rhai file.
+#
+# [[script]] — lifecycle hooks: on_init once at start, on_close once at stop.
+# [[poll]]   — a function called in the background at a fixed interval.
+#
+# Safe to change: triggers, intervals, error handling.
+# =============================================================================
+
+[defaults]
+enabled        = true
+# log_and_hold | disable_script | backoff
+error_policy   = "log_and_hold"
+# Rhai operation budget per call (a guard against endless loops).
+op_budget_tick = 100000
+# Soft deadline per call, ms (0 = no limit).
+timeout_ms     = 5
+
+[[script]]
+file     = "main.rhai"
+triggers = ["on_init", "on_close"]
+
+# A background loop: call tour_tick() every 5 seconds.
+[[poll]]
+name         = "tour_tick"
+file         = "main.rhai"
+function     = "tour_tick"
+interval_ms  = 5000
+enabled      = true
+run_on_start = true
+timeout_ms   = 0
+error_policy = "backoff"

@@ -1,0 +1,56 @@
+# Declarative configuration for OPC UA Client Generator.
+# Defines input targets, defaults, monitoring parameters, and tag/group rules.
+
+[generator]
+kind         = "opc_client"
+output_dir   = "config/02_northbound/04_opc_client"
+on_collision = "error"          # error | skip | rename
+dry_run      = false
+report_path  = "data/opc_client_generator_report.json"
+# layout     = "single"         # single (endpoints.toml) | split (endpoints.d/<device>.toml)
+
+# Targets: specific files (strictly that file) or directories (recursive)
+targets = [
+  "config/01_southbound/01_modbus",
+#  "config/01_southbound/02_s7comm",
+#  "config/01_southbound/04_virtual_tags",
+]
+
+[template]
+endpoint_url    = "opc.tcp://127.0.0.1:4840/"
+node_id         = "ns=2;s={device}.{tag}"
+application_uri = "urn:prism:client:{device}"
+
+[defaults.security]
+security_policy = "None"
+security_mode   = "None"
+pki_dir         = "../data/pki/client"
+
+[defaults.monitoring]
+sampling_interval_ms = 500
+queue_size           = 10
+discard_oldest       = true
+
+[defaults.mqtt]
+qos    = 0
+retain = false
+
+# Group overrides by tag pattern
+[[group]]
+match = "pamas_s40.*"
+monitoring.sampling_interval_ms = 100
+monitoring.queue_size           = 50
+monitoring.discard_oldest       = false
+mqtt.qos                        = 1
+
+[[group]]
+match = "delta_as200.oil_*"
+mqtt.qos = 1
+
+# Individual tag overrides
+[[tag]]
+name = "delta_as200.oil_flow_set"
+monitoring.sampling_interval_ms = 50
+monitoring.discard_oldest       = false
+mqtt.qos                        = 1
+mqtt.retain                     = true

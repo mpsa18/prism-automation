@@ -129,12 +129,12 @@ candidate they fail.
 |---|---|
 | `control list` | Prints `tag`, `role`, value, plus `[no data]` for a bad sample and `[forced=…, computed …]` when an override is active. It does **not** print register metadata; use `tags` or the panel's selected-tag line for the config passport. |
 | `control get <tag>` | One line `tag = value` with the same flags. |
-| `control set <tag> <value>` | Real write through the endpoint's write path. Prints `tag = value (external)`. |
-| `control force <tag> <value>` | Debug override: every reader sees the value while the override is active. |
+| `control set <tag> <value>` | Real write through the endpoint's write path: the data type and `min`/`max` limits apply, exactly as for an MQTT/OPC command. Prints `tag = value (external)` or the rejection reason. Use `force` to inject an out-of-range value for testing. |
+| `control force <tag> <value>` | Debug override: every reader sees the value while the override is active. Finite/type checks still apply, but `min`/`max` and raw clamping do not — this is the way to test `-10` on a 0..100 % tag. |
 | `control freeze <tag>` | Override at the tag's current effective value. |
 | `control release <tag>` | Remove one override; prints whether it was forced. |
 | `control release_all` | Remove the overrides owned by this connection and print the count. |
-| `control stats` | Simulator: simulated time/tick, objects, tags, speed, paused. Prism: also uptime, MQTT published/dropped, accepted/rejected commands, read/write counters, RAM/CPU/handles and per-device counters. |
+| `control stats` | Simulator: instance name (`[sim].name`), simulated time/tick, objects, tags, speed, paused. Prism: instance name and also uptime, MQTT published/dropped, accepted/rejected commands, read/write counters, RAM/CPU/handles and per-device counters. |
 | `control pause`, `resume`, `shutdown` | Served by the simulator. The Prism debug API answers `unsupported`; the command exits `1`. |
 | `control reload_status`, `reload_confirm`, `reload_reject` | Read, apply or discard the staged configuration change. Served by both endpoints. |
 
@@ -305,10 +305,11 @@ overrides last for the connection and disappear at disconnect.
 - Values must be finite. Freeze on a tag with no numeric value fails.
 - String tags cannot be forced on the core.
 - License status tags are refused locally by the panel and by the core.
-- On the core, an active alarm is above the debug tier: while an alarm holds a
-  tag, force and freeze are refused with
-  `tag '<id>' is held by active alarm '<rule>'; alarms outrank debug
-  overrides`.
+- Debug force/freeze is the highest display layer: it is allowed on a tag
+  held by an active alarm and hides the alarm value for engineering work.
+  Releasing the override reveals the alarm hold again. Debug `set` also passes
+  the interlock and updates the stored/physical value, while readers keep
+  seeing the alarm hold until it resets.
 
 ## Interactive panel
 

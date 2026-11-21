@@ -1,0 +1,7 @@
+{
+  "device": "{{namespace}}",
+  "message": "{{message}}",
+  "strategy": "{{strategy}}",
+  "tag": "{{name}}",
+  "ts": "{{timestamp}}"
+}

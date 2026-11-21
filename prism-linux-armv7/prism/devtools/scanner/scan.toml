@@ -1,0 +1,202 @@
+# prism-scan — declarative read-only field scan.
+#
+# One file describes everything the scanner does; there is no interactive menu.
+# Run it with:
+#
+#   prism-scan --config scan.toml
+#
+# or put this file next to prism-scan(.exe) and run the binary without flags.
+# Scopes accept single values, lists, ranges and CIDR (ports and units also
+# accept bare integers):
+#   hosts      "127.0.0.1", "192.168.1.0/24", "192.168.1.10-20"
+#   ports      "502", "502,15020", "15020-15023"
+#   units      "1", "1-16", "1,3,5"
+# Several [[...]] blocks may be combined to scan several scopes.
+
+[scan]
+name = "field-scan"        # report title
+timeout_ms = 500           # network connect/read timeout
+serial_timeout_ms = 200    # serial response timeout
+inter_frame_ms = 20        # pause between serial frames
+concurrency = 16           # parallel Modbus TCP / S7 probes
+dedupe_units = true        # one device when several unit ids answer identically
+
+# ── Discovery ────────────────────────────────────────────────────────────────
+
+# Modbus TCP: every host is probed on every port for every unit id.
+# A unit is reported only after a successful read. Units that answer only with
+# a Modbus exception are listed as suspects and are not written to config.
+[[modbus_tcp]]
+hosts = "127.0.0.1"
+ports = "502"
+units = "1"                # narrow this for a gateway; see dedupe_units above
+
+# Modbus RTU/ASCII. Without `ports` every serial port detected by the OS is
+# scanned. `framing = "auto"` tries RTU and ASCII. Discovery may try several
+# unit ids, but generation requires one device per serial port (Prism runs a
+# separate poller per device): keep one unit per port, or the generator stops
+# with an explicit error.
+#[[modbus_serial]]
+#ports = "COM3,COM4"
+#units = "1-8"
+#bauds = "9600,19200,38400,57600,115200"
+#parities = "none,even,odd"
+#stop_bits = "1,2"
+#framing = "auto"          # auto | rtu | ascii
+# Discovery probes these addresses to find a unit. If a device silently
+# ignores unmapped address 0, add its first valid coil/register:
+#probe_addresses = "0,300,600"
+
+# S7comm: rack/slot candidates are tried for every host and port.
+#[[s7]]
+#hosts = "192.168.0.10"
+#ports = "102"
+#rack_slots = "0/1,0/2,0/3,0/0"
+
+# OPC UA: GetEndpoints on every host and port.
+#[[opcua]]
+#hosts = "127.0.0.1"
+#ports = "4840"
+
+# ── Import an existing PLC map ──────────────────────────────────────────────
+#
+# An import is the explicit source of truth: imported tags are written as-is,
+# and [[register]] rules only fill the gaps (an imported tag wins by name and
+# by area+address). Use it when the PLC project is available and guessing is
+# not acceptable.
+#
+# `step7` reads a STEP 7 / TIA Portal symbol table exported as CSV. Addresses
+# must be absolute (MW10, DB1.DBW0, DB1.DBX0.0, I0.0, Q0.0). Optimized
+# S7-1200/1500 DBs have no absolute addresses: export a non-optimized DB or
+# use OPC UA.
+#
+#[[import]]
+#path = "symbols.csv"      # relative to this plan
+#format = "step7"          # step7 | csv | json
+#hosts = "192.168.0.10"
+#rack_slots = "0/1"
+## verify = true           # read every imported address once
+#
+# Canonical CSV (any vendor export, or `prism-scan --export-map`):
+#   name,area,address,data_type,word_order,byte_order,byte_permutation,
+#   byte_len,string_format,access,scale,offset,unit,description,db,bit,count
+# `offset` is the engineering offset, not the S7 byte address. `count` expands
+# an array into name_0..name_N (STEP 7 arrays keep the PLC index).
+#
+#[[import]]
+#path = "modbus_map.csv"
+#format = "csv"
+#protocol = "modbus"
+#hosts = "192.168.1.5"
+#ports = "502"
+#units = "1"
+## delimiter = "semicolon" # default: auto-detect comma/semicolon/tab
+## encoding = "auto"      # auto | utf-8 | utf-16 | windows-1251
+## access = "ro"          # default for rows without an access column
+## [import.columns]       # custom header names
+## name = "Tag"
+## area = "Table"
+## address = "Address"
+## data_type = "Data type"
+#
+# `prism-scan --export-map out.csv` writes the discovered map in this canonical
+# form for review, editing and re-import.
+
+# ── Address / register scan of the discovered devices ────────────────────────
+#
+# Rules run after discovery, in file order. A rule matches discovered devices
+# by protocol and the optional filters (`hosts`, `ports`, `units`,
+# `rack_slots`, `serial_ports`). Without filters it applies to every device of
+# that protocol. Remove the leading `#` to enable a block.
+
+#[[register]]
+#protocol = "modbus"
+#ports = "502"
+#units = "1"
+#areas = "coil,discrete,holding,input"
+#start = 0
+#end = 9
+#step = 1                  # default: 1 for bit-only areas, data-type width otherwise
+#data_type = "word"        # word | int | dword | dint | real | string | auto
+#
+# `auto` discovers the present registers on the word grid, samples them and
+# infers the type and word/byte order from the values. Candidates are paired
+# into dword/dint/real only when the evidence is strong. Below
+# `infer_min_confidence` the tag is not written to the generated TOML; it is
+# listed in a comment at the end of the device block, and the JSON report keeps
+# it with `verify = true`.
+#data_type = "auto"
+#infer_samples = 12        # sampling rounds (auto and infer_order)
+#infer_interval_ms = 250   # delay between rounds
+#infer_min_confidence = 0.85
+#
+# Keep a known type and infer only its order:
+#data_type = "real"
+#infer_order = true
+#
+# Or name the 32-bit layout explicitly (any permutation of [0,1,2,3]):
+#data_type = "real"
+#byte_permutation = [2, 3, 0, 1]   # CDAB
+#
+# Strings need a payload length; `byte_len` defaults to 32 bytes.
+#data_type = "string"
+#byte_len = 32
+
+# RTU/ASCII: discovery only finds the line settings and unit ids; the same
+# [[register]] rule enumerates the actual tags over the serial link. Use
+# serial_ports to limit the rule to a discovered serial device (omit it to
+# scan every discovered Modbus device, TCP and serial alike).
+#[[register]]
+#protocol = "modbus"
+#serial_ports = "COM3"
+#units = "2"
+#areas = "holding,input"
+#start = 0
+#end = 20
+#step = 1
+#data_type = "word"
+
+#[[register]]
+#protocol = "s7"
+#areas = "db"              # db | mk | pe | pa
+#db = 1
+#start = 0
+#end = 15
+#step = 2
+#data_type = "word"        # ... | string | auto
+## data_type = "bool"
+## bit = 0                 # bool scans use one bit per byte (0..7)
+#
+# S7 strings: byte_len is the payload; string_format = "s7" (default, 2-byte
+# header) or "raw" (CHAR array). S7 is big-endian, so infer_order is rejected;
+# data_type = "auto" samples values and infers the type only.
+#data_type = "string"
+#byte_len = 32
+#string_format = "raw"
+
+#[[register]]
+#protocol = "opcua"
+#depth = 4                 # browse depth under Objects (0..20)
+#max_nodes = 500           # stop after this many nodes
+
+# ── Result ───────────────────────────────────────────────────────────────────
+#
+# By default the generated file is written directly into the discovered
+# instance as an ordinary Prism device module:
+#   config/01_southbound/01_modbus/<module>/<file>.toml
+#   config/01_southbound/02_s7comm/<module>/<file>.toml
+#   config/01_southbound/03_opc_client/<module>/<file>.toml
+# Nothing else is needed: run `prism --check-config` and start the core.
+# A relative `root` and `report` are resolved from this file's directory.
+# Set `root` to generate outside config/ (for review), and `report` to also
+# write a machine-readable JSON report for automation.
+
+[output]
+generate = true
+module = "discovered"
+file = "01_scan.toml"
+# root = "out/01_southbound"      # optional: keep the module out of config/
+# report = "scan-report.json"    # optional: JSON copy for scripts
+# OPC UA: only needed when the server offers secure endpoints only.
+#opcua_certificate = "../data/pki/client/cert.pem"
+#opcua_private_key = "../data/pki/client/key.pem"

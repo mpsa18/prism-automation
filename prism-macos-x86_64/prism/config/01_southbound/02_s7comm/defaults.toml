@@ -1,0 +1,12 @@
+# =============================================================================
+# 02_s7comm/defaults.toml — shared defaults for Siemens S7 devices
+# =============================================================================
+
+# [defaults]
+# timeout_ms       = 3000
+# poll_interval_ms = 200
+#
+# [defaults.reconnect]
+# count    = "infinite"
+# strategy = "hold_infinite"
+# backoff  = "none"

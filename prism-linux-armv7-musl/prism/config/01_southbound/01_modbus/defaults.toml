@@ -1,0 +1,24 @@
+# =============================================================================
+# 01_modbus/defaults.toml — shared defaults for every Modbus device
+#
+# Device files in subfolders inherit these values. Uncomment and change only
+# what the project needs.
+# =============================================================================
+
+# [defaults.device]
+# timeout_ms       = 2000
+# poll_interval_ms = 200
+#
+# [defaults.reconnect]
+# count    = "infinite"        # integer or "infinite"
+# strategy = "hold_infinite"   # hold_infinite | retry
+# backoff  = "none"            # none | linear | exponential
+#
+# [defaults.tcp]
+# port = 502
+#
+# [defaults.tag]
+# access = "ro"
+#
+# [defaults.tag.fail]
+# fail_strategy = "last_known" # last_known | zero | nan

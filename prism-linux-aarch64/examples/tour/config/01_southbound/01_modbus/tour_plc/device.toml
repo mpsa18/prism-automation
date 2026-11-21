@@ -1,0 +1,71 @@
+# =============================================================================
+# tour_plc — the only field device in the tour
+#
+# A Modbus TCP controller. The address is loopback and a non-privileged port,
+# so the bundled simulator can serve it without hardware or administrator
+# rights. A real project would use the PLC's real IP address and port 502.
+#
+# Registers used below (Modbus numbering):
+#   input  0      temperature, raw 0..1000, scale 0.1 -> 0.0..100.0 °C
+#   input  1      pressure,    raw 0..1000, scale 0.01 -> 0.0..10.0 bar
+#   coil   0      pump_run, 1 = running
+#   holding 10    setpoint, raw 0..1000, scale 0.1 -> 0.0..100.0 °C
+#
+# Safe to change: ip, port, unit_id, addresses, scale, access, descriptions.
+# =============================================================================
+
+[[device]]
+name      = "tour_plc"
+protocol  = "modbus"
+transport = "tcp"
+
+[device.tcp]
+ip      = "127.0.0.1"
+port    = 15020
+unit_id = 1
+
+# --- measured values (read-only) ---------------------------------------------
+
+[[device.tag]]
+name          = "temperature"
+address       = 0
+register      = "input"
+data_type     = "word"
+scale         = 0.1
+access        = "ro"
+unit          = "°C"
+initial_value = 20.0
+description   = "Measured temperature of the simulated heater"
+
+[[device.tag]]
+name          = "pressure"
+address       = 1
+register      = "input"
+data_type     = "word"
+scale         = 0.01
+access        = "ro"
+unit          = "bar"
+initial_value = 1.0
+description   = "Line pressure of the simulated loop"
+
+# --- operator commands (read/write) ------------------------------------------
+
+[[device.tag]]
+name          = "pump_run"
+address       = 0
+register      = "coil"
+data_type     = "bool"
+access        = "rw"
+initial_value = 0.0
+description   = "Pump command: 1 = run, 0 = stop"
+
+[[device.tag]]
+name          = "setpoint"
+address       = 10
+register      = "holding"
+data_type     = "word"
+scale         = 0.1
+access        = "rw"
+unit          = "°C"
+initial_value = 60.0
+description   = "Temperature target driven by the simulator"
